@@ -1508,6 +1508,15 @@ td.primary {
   flex-wrap: nowrap;
 }
 
+/* 现存规则卡内的紧凑行内操作（row-actions 轻量子集） */
+.existing-row-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
 .row-actions .btn {
   min-height: 30px;
   padding: 4px 9px;

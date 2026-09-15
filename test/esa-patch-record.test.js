@@ -89,9 +89,10 @@ test('main.js 必须 import deleteEsaRecord', () => {
   assert.match(mainJs, /import[\s\S]{0,300}deleteEsaRecord[\s\S]{0,200}from\s+['"]\.\/existing\.js['"]/);
 });
 
-test('existing.js ESA 加速开关显示为"已启用"且 disabled（CNAME 接入不允许关闭 proxied）', () => {
+test('existing.js ESA 详情弹窗含"已启用"标识（CNAME 接入不允许关闭 proxied）', () => {
+  // 加速开关从行内 toggle 移到详情弹窗（kv 列表）
   assert.match(existingJs, /已启用/);
-  assert.match(existingJs, /checked disabled/);
+  assert.match(existingJs, /CNAME 接入不允许关闭/);
 });
 
 test('existing.js hostPolicy 用 select 选项（3 选 1）', () => {
@@ -123,10 +124,10 @@ test('existing.js proxied 用 select（true/false 两选一），不用 input', 
   assert.doesNotMatch(proxMatch[0], /<input\s+name="proxied"/);
 });
 
-test('existing.js ESA 行有 edit-esa 按钮且 HTML 结构正确（一个 data-label="操作" td）', () => {
-  assert.match(existingJs, /data-existing-action="edit-esa"/);
+test('existing.js ESA 详情弹窗有 edit 按钮（行级弹窗，编辑从行内移到弹窗）', () => {
+  // 编辑按钮从行内 data-existing-action 移到详情弹窗的 data-existing-esa-detail-action
+  assert.match(existingJs, /data-existing-esa-detail-action="edit"/);
   assert.match(existingJs, /data-record-id=/);
-  // 编辑按钮与 copy/open 按钮应在同一个 <td data-label="操作"> 里
-  const esaRow = existingJs.match(/edit-esa[\s\S]{0,2000}复制域名/);
-  assert.ok(esaRow, 'edit-esa 按钮与复制按钮应在同一行');
+  // 行级弹窗：行 tr 带 data-existing-esa-record-id
+  assert.match(existingJs, /data-existing-esa-record-id="/);
 });

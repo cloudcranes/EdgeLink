@@ -52,10 +52,8 @@ function renderLuckyRules(container) {
         <tr>
           <th>状态</th>
           <th>域名</th>
-          <th>回源目标</th>
-          <th>备注</th>
-          <th>端口</th>
           <th>开关</th>
+          <th class="row-detail-hint-th"></th>
           <th>操作</th>
         </tr>
       </thead>
@@ -66,15 +64,10 @@ function renderLuckyRules(container) {
             const accelDomain = siteRoot ? `${domain.split('.')[0]}.cdn.${siteRoot}` : '';
             const enabled =
               !!accelDomain && (domainSet.has(accelDomain) || (domain && targetSet.has(domain)));
-            const importDisabled = rule.managed ? '' : 'disabled';
-            const esaDisabled = enabled || !accelDomain;
             return `
-          <tr>
+          <tr data-existing-lucky-key="${escapeHtml(rule.key)}" class="app-row-clickable">
             <td data-label="状态"><span class="pill ${rule.enabled ? 'on' : 'off'}">${rule.enabled ? '启用' : '停用'}</span></td>
-            <td class="mono" data-label="域名">${escapeHtml(domain || '-')}</td>
-            <td class="mono" data-label="回源目标">${escapeHtml((rule.locations[0] || '-').replace(/^https?:\/\//, ''))}</td>
-            <td data-label="备注">${escapeHtml(rule.name || '-')}</td>
-            <td class="mono" data-label="端口">${escapeHtml(rule.listenPort || '-')}</td>
+            <td class="mono" data-label="域名">${escapeHtml(domain || '—')}</td>
             <td data-label="开关">
               <div class="app-switches">
                 <label class="mini-toggle" title="是否反代（Lucky 子规则启停）">
@@ -89,21 +82,14 @@ function renderLuckyRules(container) {
                 </label>
               </div>
             </td>
+            <td class="row-detail-hint" data-label="">
+              <span class="row-detail-hint-icon"><i data-lucide="chevron-right"></i></span>
+            </td>
             <td data-label="操作">
-              <div class="row-actions">
-                <button class="btn" type="button" data-existing-action="copy" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" title="复制域名（${escapeHtml(enabled ? accelDomain : domain)}${enabled ? '' : ':' + escapeHtml(rule.listenPort || '')}）">
-                  <i data-lucide="copy"></i>
-                </button>
-                <button class="btn" type="button" data-existing-action="open" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" data-port="${enabled ? '' : escapeHtml(rule.listenPort || '')}" title="访问${enabled ? ` ${escapeHtml(accelDomain)}` : ` ${escapeHtml(domain)}:${escapeHtml(rule.listenPort || '')}`}">
-                  <i data-lucide="external-link"></i>
-                </button>
-                <button class="btn" type="button" data-existing-action="import" data-key="${escapeHtml(rule.key)}" ${importDisabled} title="${rule.managed ? '导入为面板应用' : '手动规则不支持导入（避免重复）'}">
-                  <i data-lucide="download"></i>
-                  <span>${rule.managed ? '导入' : '手动'}</span>
-                </button>
-                <button class="btn ${enabled ? 'btn-done' : 'btn-secondary'}" type="button" data-existing-action="enable-esa" data-domain="${escapeHtml(domain)}" data-target="${escapeHtml(domain)}" data-accel="${escapeHtml(accelDomain)}" ${esaDisabled ? 'disabled' : ''} title="${enabled ? `已开通 ${escapeHtml(accelDomain)}` : accelDomain ? `开通 ESA：${escapeHtml(accelDomain)} -> ${escapeHtml(domain)}` : '未配置 ESA 站点'}">
+              <div class="existing-row-actions">
+                <button class="btn" type="button" data-existing-action="enable-esa" data-domain="${escapeHtml(domain)}" data-target="${escapeHtml(domain)}" data-accel="${escapeHtml(accelDomain)}" ${enabled || !accelDomain ? 'disabled' : ''} title="${enabled ? `已开通 ${escapeHtml(accelDomain)}` : accelDomain ? `开通 ESA：${escapeHtml(accelDomain)} -> ${escapeHtml(domain)}` : '未配置 ESA 站点'}">
                   <i data-lucide="${enabled ? 'check-circle' : 'globe'}"></i>
-                  <span>${enabled ? '已开通' : '开通 ESA'}</span>
+                  <span>${enabled ? '已开通' : '开通'}</span>
                 </button>
               </div>
             </td>
@@ -125,8 +111,7 @@ function renderEsaRules(container) {
           <tr>
             <th>域名</th>
             <th>类型</th>
-            <th>记录值</th>
-            <th>加速</th>
+            <th class="row-detail-hint-th"></th>
             <th>操作</th>
           </tr>
         </thead>
@@ -134,32 +119,17 @@ function renderEsaRules(container) {
           ${esaDomains
             .map(
               (domain) => `
-            <tr>
-              <td class="mono" data-label="域名">${escapeHtml(domain.name || '-')}</td>
-              <td class="mono" data-label="类型">${escapeHtml(domain.type || '-')}</td>
-              <td class="mono" data-label="记录值">${escapeHtml(domain.value || domain.recordCname || '-')}</td>
-              <td data-label="加速">
-                <label class="mini-toggle" title="ESA 加速已启用（CNAME 接入不允许关闭 proxied；如需彻底关闭请删除应用或调用 disableEsaDomain）">
-                  <input type="checkbox" checked disabled />
-                  <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
-                  <span class="mini-toggle-label">已启用</span>
-                </label>
+            <tr data-existing-esa-record-id="${escapeHtml(String(domain.id || ''))}" class="app-row-clickable">
+              <td class="mono" data-label="域名">${escapeHtml(domain.name || '—')}</td>
+              <td class="mono" data-label="类型">${escapeHtml(domain.type || '—')}</td>
+              <td class="row-detail-hint" data-label="">
+                <span class="row-detail-hint-icon"><i data-lucide="chevron-right"></i></span>
               </td>
               <td data-label="操作">
-                <div class="row-actions">
-                  <button class="btn" type="button" data-existing-action="edit-esa" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="编辑 ESA 记录（回源/hostPolicy/proxied/ttl）">
-                    <i data-lucide="edit-3"></i>
-                    <span>编辑</span>
-                  </button>
+                <div class="existing-row-actions">
                   <button class="btn" type="button" data-existing-action="del-esa" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="删除 ESA 记录（可连带删 DDNS CNAME）">
                     <i data-lucide="trash-2"></i>
                     <span>删除</span>
-                  </button>
-                  <button class="btn" type="button" data-existing-action="copy" data-domain="${escapeHtml(domain.name)}" title="复制域名">
-                    <i data-lucide="copy"></i>
-                  </button>
-                  <button class="btn" type="button" data-existing-action="open" data-domain="${escapeHtml(domain.name)}" title="访问域名">
-                    <i data-lucide="external-link"></i>
                   </button>
                 </div>
               </td>
@@ -563,4 +533,91 @@ export async function enableAllEsa() {
   }
   renderExistingRules();
   appendLog('开通 ESA', 'ok', `批量完成：新开通 ${okCount} 条`);
+}
+
+/* ---------- 详情弹窗：Lucky 子规则 / ESA 加速域名 ---------- */
+
+function findLuckyRuleByKey(key) {
+  return luckyRules.find((r) => r.key === key);
+}
+function findEsaDomainById(id) {
+  return esaDomains.find((d) => String(d.id) === String(id));
+}
+
+export function openExistingLuckyModal(key) {
+  const rule = findLuckyRuleByKey(key);
+  if (!rule) return;
+  const siteRoot = deriveSiteRoot();
+  const domain = rule.domains[0] || '';
+  const accelDomain = siteRoot ? `${domain.split('.')[0]}.cdn.${siteRoot}` : '';
+  const enabled = !!accelDomain && (new Set(esaDomains.map((d) => d.name)).has(accelDomain) || (domain && new Set(esaDomains.map((d) => d.value)).has(domain)));
+  el('existing-lucky-modal-title').textContent = rule.name || domain || 'Lucky 子规则详情';
+  const target = (rule.locations[0] || '').replace(/^https?:\/\//, '');
+  el('existing-lucky-modal-body').innerHTML = `
+    <dl class="kv">
+      <dt>状态</dt><dd><span class="pill ${rule.enabled ? 'on' : 'off'}">${rule.enabled ? '启用' : '停用'}</span></dd>
+      <dt>域名</dt><dd class="mono">${escapeHtml(domain || '—')}</dd>
+      <dt>回源目标</dt><dd class="mono">${escapeHtml(target || '—')}</dd>
+      <dt>备注</dt><dd>${escapeHtml(rule.name || '—')}</dd>
+      <dt>端口</dt><dd class="mono">${escapeHtml(rule.listenPort || '—')}</dd>
+      <dt>加速域名</dt><dd class="mono">${escapeHtml(accelDomain || '—')}${enabled ? ' <span class="pill on">已开通</span>' : ''}</dd>
+      <dt>面板管理</dt><dd>${rule.managed ? '<span class="pill on">是</span>' : '<span class="pill off">否（手动）</span>'}</dd>
+    </dl>
+    <div class="modal-actions">
+      <button type="button" class="btn" data-existing-detail-action="copy" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" ${enabled ? '' : `data-port="${escapeHtml(rule.listenPort || '')}"`} title="复制域名">
+        <i data-lucide="copy"></i><span>复制域名</span>
+      </button>
+      <button type="button" class="btn" data-existing-detail-action="open" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" data-port="${enabled ? '' : escapeHtml(rule.listenPort || '')}" title="打开域名">
+        <i data-lucide="external-link"></i><span>打开</span>
+      </button>
+      <button type="button" class="btn" data-existing-detail-action="import" data-key="${escapeHtml(rule.key)}" ${rule.managed ? '' : 'disabled'} title="${rule.managed ? '导入为面板应用' : '手动规则不支持导入'}">
+        <i data-lucide="download"></i><span>${rule.managed ? '导入为面板应用' : '手动规则'}</span>
+      </button>
+      <button type="button" class="btn ${enabled ? 'btn-done' : 'btn-secondary'}" data-existing-detail-action="enable-esa" data-domain="${escapeHtml(domain)}" data-target="${escapeHtml(domain)}" data-accel="${escapeHtml(accelDomain)}" ${enabled || !accelDomain ? 'disabled' : ''} title="${enabled ? `已开通 ${escapeHtml(accelDomain)}` : accelDomain ? `开通 ESA：${escapeHtml(accelDomain)} -> ${escapeHtml(domain)}` : '未配置 ESA 站点'}">
+        <i data-lucide="${enabled ? 'check-circle' : 'globe'}"></i><span>${enabled ? '已开通 ESA' : '开通 ESA'}</span>
+      </button>
+    </div>
+  `;
+  el('existing-lucky-modal').classList.remove('hidden');
+  refreshIcons();
+}
+
+export function closeExistingLuckyModal() {
+  el('existing-lucky-modal')?.classList.add('hidden');
+}
+
+export function openExistingEsaModal(recordId) {
+  const domain = findEsaDomainById(recordId);
+  if (!domain) return;
+  el('existing-esa-modal-title').textContent = domain.name || 'ESA 加速域名详情';
+  el('existing-esa-modal-body').innerHTML = `
+    <dl class="kv">
+      <dt>域名</dt><dd class="mono">${escapeHtml(domain.name || '—')}</dd>
+      <dt>类型</dt><dd class="mono">${escapeHtml(domain.type || '—')}</dd>
+      <dt>记录值</dt><dd class="mono">${escapeHtml(domain.value || domain.recordCname || '—')}</dd>
+      <dt>记录 CNAME</dt><dd class="mono">${escapeHtml(domain.recordCname || '—')}</dd>
+      <dt>加速状态</dt><dd><span class="pill on">已启用</span>（CNAME 接入不允许关闭）</dd>
+      <dt>recordId</dt><dd class="mono">${escapeHtml(String(domain.id || '—'))}</dd>
+    </dl>
+    <div class="modal-actions">
+      <button type="button" class="btn" data-existing-esa-detail-action="edit" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="编辑 ESA 记录">
+        <i data-lucide="edit-3"></i><span>编辑</span>
+      </button>
+      <button type="button" class="btn btn-danger" data-existing-esa-detail-action="delete" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="删除 ESA 记录（可连带删 DDNS CNAME）">
+        <i data-lucide="trash-2"></i><span>删除</span>
+      </button>
+      <button type="button" class="btn" data-existing-esa-detail-action="copy" data-domain="${escapeHtml(domain.name)}" title="复制域名">
+        <i data-lucide="copy"></i><span>复制域名</span>
+      </button>
+      <button type="button" class="btn" data-existing-esa-detail-action="open" data-domain="${escapeHtml(domain.name)}" title="打开域名">
+        <i data-lucide="external-link"></i><span>打开</span>
+      </button>
+    </div>
+  `;
+  el('existing-esa-modal').classList.remove('hidden');
+  refreshIcons();
+}
+
+export function closeExistingEsaModal() {
+  el('existing-esa-modal')?.classList.add('hidden');
 }

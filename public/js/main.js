@@ -8,6 +8,7 @@ import { importLuckyRule, enableEsaForRule, enableAllEsa, editEsaRecord, deleteE
 import { refreshQuickStart } from './quickstart.js';
 import { refreshSummary } from './summary.js';
 import { bindDdnsDeleteHandler, refreshDdns } from './ddns.js';
+import { closeExistingEsaModal, closeExistingLuckyModal, openExistingEsaModal, openExistingLuckyModal } from './existing.js';
 import { bindMaintenance, fixAudit, refreshSnapshots, runAudit, runPortPrecheck } from './maintenance.js';
 import { initBasicAuth, renderBasicAuth } from './settings.js';
 
@@ -434,6 +435,17 @@ function bindEvents() {
   document.getElementById('existing-rules-body').addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-existing-action]');
     if (!button) {
+      // 行级弹窗入口：非按钮/开关区域点击触发详情（开关通过 change 事件独立处理）
+      const luckyRow = event.target.closest('tr[data-existing-lucky-key]');
+      if (luckyRow && !event.target.closest('.app-switches')) {
+        openExistingLuckyModal(luckyRow.dataset.existingLuckyKey);
+        return;
+      }
+      const esaRow = event.target.closest('tr[data-existing-esa-record-id]');
+      if (esaRow && !event.target.closest('.app-switches')) {
+        openExistingEsaModal(esaRow.dataset.existingEsaRecordId);
+        return;
+      }
       return;
     }
     const action = button.dataset.existingAction;
@@ -451,6 +463,61 @@ function bindEvents() {
       else showToast('复制失败', 'err');
     } else if (action === 'open') {
       openDomain(button.dataset.domain, button.dataset.port);
+    }
+  });
+  // 现存规则 Lucky 详情弹窗：内嵌动作按钮
+  document.getElementById('existing-lucky-modal-body').addEventListener('click', async (event) => {
+    const btn = event.target.closest('button[data-existing-detail-action]');
+    if (!btn) return;
+    const action = btn.dataset.existingDetailAction;
+    if (action === 'copy' && btn.dataset.domain) {
+      const ok = await copyText(btn.dataset.domain);
+      if (ok) showToast(`已复制 ${btn.dataset.domain}`, 'ok');
+      else showToast('复制失败', 'err');
+    } else if (action === 'open' && btn.dataset.domain) {
+      openDomain(btn.dataset.domain, btn.dataset.port);
+    } else if (action === 'import') {
+      closeExistingLuckyModal();
+      importLuckyRule(btn.dataset.key);
+    } else if (action === 'enable-esa') {
+      closeExistingLuckyModal();
+      enableEsaForRule(btn.dataset.accel, btn.dataset.target);
+    }
+  });
+  // 现存规则 ESA 详情弹窗：内嵌动作按钮
+  document.getElementById('existing-esa-modal-body').addEventListener('click', async (event) => {
+    const btn = event.target.closest('button[data-existing-esa-detail-action]');
+    if (!btn) return;
+    const action = btn.dataset.existingEsaDetailAction;
+    if (action === 'copy' && btn.dataset.domain) {
+      const ok = await copyText(btn.dataset.domain);
+      if (ok) showToast(`已复制 ${btn.dataset.domain}`, 'ok');
+      else showToast('复制失败', 'err');
+    } else if (action === 'open' && btn.dataset.domain) {
+      openDomain(btn.dataset.domain);
+    } else if (action === 'edit') {
+      closeExistingEsaModal();
+      editEsaRecord(btn.dataset.recordId, btn.dataset.domain);
+    } else if (action === 'delete') {
+      closeExistingEsaModal();
+      deleteEsaRecord(btn.dataset.recordId, btn.dataset.domain);
+    }
+  });
+  // 弹窗关闭（背景/按钮/Esc）
+  document.getElementById('existing-lucky-modal').addEventListener('click', (event) => {
+    if (event.target.id === 'existing-lucky-modal' || event.target.closest('[data-close-existing-lucky]')) {
+      closeExistingLuckyModal();
+    }
+  });
+  document.getElementById('existing-esa-modal').addEventListener('click', (event) => {
+    if (event.target.id === 'existing-esa-modal' || event.target.closest('[data-close-existing-esa]')) {
+      closeExistingEsaModal();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeExistingLuckyModal();
+      closeExistingEsaModal();
     }
   });
   document.querySelectorAll('input[name="existing-source"]').forEach((input) => {
