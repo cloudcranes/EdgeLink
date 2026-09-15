@@ -3,8 +3,7 @@
 // 故仅探测 cdn 公网加速域名的可达性。
 const { HEALTH_H_MAX_POINTS } = require('../lib/constants');
 const { readConfig } = require('../lib/config');
-const { cdnDomainOf } = require('../lib/normalize');
-const { probeUrl, appendHealthHistory, readHealthHistory } = require('../lib/health');
+const { probeUrl, cdnProbeUrl, appendHealthHistory, readHealthHistory } = require('../lib/health');
 const { asyncHandler } = require('../utils/http');
 
 function register(app) {
@@ -19,10 +18,10 @@ function register(app) {
       const apps = (config.apps || []).filter((a) => a.prefix);
       const results = await Promise.all(
         apps.map(async (app) => {
-          const cdn = cdnDomainOf(app, config);
+          const url = cdnProbeUrl(app, config);
           const checks = [];
-          if (cdn && app.esaEnabled !== false) {
-            checks.push({ label: 'cdn', url: `https://${cdn}`, ...(await probeUrl(`https://${cdn}`)) });
+          if (url && app.esaEnabled !== false) {
+            checks.push({ label: 'cdn', url, ...(await probeUrl(url)) });
           }
           return { id: app.id, name: app.name || app.prefix, prefix: app.prefix, group: app.group || '', checks };
         }),
