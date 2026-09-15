@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EdgeLink</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/theme.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar" aria-label="顶栏">
+        <div class="topbar-brand">
+          <span class="brand-icon"><i data-lucide="server-cog"></i></span>
+          <div class="sidebar-brand-text">
+            <strong>EdgeLink</strong>
+            <span>本地反代 + ESA 加速</span>
+          </div>
+        </div>
+
+        <h1 id="topbar-title" class="topbar-title">概览</h1>
+
+        <div class="topbar-actions">
+          <!-- 全局连接状态条（移到顶栏右侧） -->
+          <div class="status-strip" aria-label="连接状态">
+            <span class="status-item">
+              <span class="status-label"><i data-lucide="plug-zap"></i>Lucky</span>
+              <span id="status-lucky" class="status-value">检测中…</span>
+            </span>
+            <span class="status-item">
+              <span class="status-label"><i data-lucide="globe"></i>ESA</span>
+              <span id="status-esa" class="status-value">检测中…</span>
+            </span>
+            <span class="status-item">
+              <span class="status-label"><i data-lucide="network"></i>回源端口</span>
+              <span id="status-gateway" class="status-value">检测中…</span>
+            </span>
+          </div>
+          <button id="refresh-status" class="btn btn-ghost icon-only" type="button" title="刷新连接状态" aria-label="刷新连接状态">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+          <div class="theme-picker">
+            <button id="theme-toggle" class="btn btn-ghost icon-only" type="button" title="切换主题" aria-label="切换主题" aria-haspopup="menu" aria-expanded="false">
+              <i data-lucide="moon"></i>
+            </button>
+            <div id="theme-menu" class="theme-menu" role="menu" aria-label="主题列表">
+              <button class="theme-option" data-theme="neon" role="menuitem" type="button">
+                <span class="theme-swatch" style="background:linear-gradient(135deg,#22c55e,#06b6d4);"></span>霓虹深空
+              </button>
+              <button class="theme-option" data-theme="aurora" role="menuitem" type="button">
+                <span class="theme-swatch" style="background:linear-gradient(135deg,#e11d48,#2563eb);"></span>幻彩玻璃
+              </button>
+              <button class="theme-option" data-theme="brutal-sun" role="menuitem" type="button">
+                <span class="theme-swatch" style="background:linear-gradient(135deg,#ffd600,#1b2cc1);"></span>粗野·黄黑
+              </button>
+              <button class="theme-option" data-theme="brutal-ocean" role="menuitem" type="button">
+                <span class="theme-swatch" style="background:linear-gradient(135deg,#ff4d00,#0047ab);"></span>粗野·橙蓝
+              </button>
+              <button class="theme-option" data-theme="brutal-berry" role="menuitem" type="button">
+                <span class="theme-swatch" style="background:linear-gradient(135deg,#7c3aed,#a3e635);"></span>粗野·莓紫
+              </button>
+              <button class="theme-option" data-theme="terminal" role="menuitem" type="button">
+                <span class="theme-swatch" style="background:linear-gradient(135deg,#22c55e,#020617);"></span>终端绿
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="shell-body">
+        <nav class="sidebar" aria-label="主导航">
+          <div class="sidebar-brand">
+            <span class="brand-icon"><i data-lucide="server-cog"></i></span>
+            <div class="sidebar-brand-text">
+              <strong>EdgeLink</strong>
+              <span>本地反代 + ESA 加速</span>
+            </div>
+          </div>
+          <a href="#/overview" class="nav-item active" data-route="overview">
+            <i data-lucide="gauge"></i><span>概览</span>
+          </a>
+          <a href="#/apps" class="nav-item" data-route="apps">
+            <i data-lucide="layout-grid"></i><span>应用管理</span>
+          </a>
+          <a href="#/settings" class="nav-item" data-route="settings">
+            <i data-lucide="settings-2"></i><span>设置</span>
+          </a>
+          <a href="#/logs" class="nav-item" data-route="logs">
+            <i data-lucide="terminal"></i><span>日志</span>
+          </a>
+          <div class="sidebar-footer">
+            <span id="save-state" class="state-dot">未保存</span>
+          </div>
+        </nav>
+
+        <main class="content">
+
+        <!-- 全局结果提示：所有页面可见（设置页生成口令、测试连接等也会用到） -->
+        <div id="deploy-result" class="result-banner" role="status" aria-live="polite" hidden></div>
+
+        <!-- ============ 概览页 ============ -->
+        <section id="page-overview" class="page" data-page="overview">
+          <div class="page-head">
+            <h2>概览</h2>
+            <p>快速开始与资源概览</p>
+          </div>
+
+          <section id="quick-start" class="quick-start" hidden>
+            <div class="panel-head">
+              <h2><i data-lucide="rocket"></i>快速开始</h2>
+              <span id="quick-start-progress" class="count"></span>
+            </div>
+            <ol id="quick-start-steps" class="quick-steps"></ol>
+          </section>
+
+          <section class="summary-panel">
+            <div class="panel-head">
+              <h2><i data-lucide="layout-dashboard"></i>资源摘要</h2>
+              <span class="count">根域 <b id="sum-root">(未设置)</b></span>
+            </div>
+            <div id="summary-cards" class="summary-cards">
+              <div class="summary-card"><span class="summary-label">面板应用</span><span id="sum-apps" class="summary-value">-</span></div>
+              <div class="summary-card"><span class="summary-label">Lucky 子规则</span><span id="sum-lucky-sub" class="summary-value">-</span></div>
+              <div class="summary-card"><span class="summary-label">ESA 加速域名</span><span id="sum-esa-domain" class="summary-value">-</span></div>
+              <div class="summary-card"><span class="summary-label">Lucky *.nas DDNS</span><span id="sum-lucky-dns" class="summary-value">-</span></div>
+              <div class="summary-card"><span class="summary-label">Lucky *.nas SSL</span><span id="sum-lucky-ssl" class="summary-value">-</span></div>
+              <div class="summary-card"><span class="summary-label">ESA *.cdn 证书</span><span id="sum-esa-cert" class="summary-value">-</span></div>
+            </div>
+          </section>
+
+          <section class="ddns-panel">
+            <div class="panel-head">
+              <h2><i data-lucide="radio"></i>Lucky DDNS 管理</h2>
+              <span class="count" id="ddns-status-summary">未刷新</span>
+            </div>
+
+            <div class="ddns-sub">
+              <h3 class="ddns-sub-head"><i data-lucide="layers"></i>任务与记录</h3>
+              <div id="ddns-tasks" class="ddns-tasks"></div>
+            </div>
+
+            <div class="ddns-sub">
+              <h3 class="ddns-sub-head"><i data-lucide="list-checks"></i>公网解析状态（nas 子域）</h3>
+              <div id="ddns-status-list" class="ddns-status-list"></div>
+            </div>
+          </section>
+
+          <section class="perf-panel">
+            <div class="panel-head">
+              <h2><i data-lucide="activity"></i>性能趋势</h2>
+              <span class="count" id="perf-window">最近 100 次（自动累计）</span>
+            </div>
+            <h3 class="perf-h3"><i data-lucide="bar-chart-3"></i>当前连通快照</h3>
+            <div id="perf-bars" class="bar-chart"></div>
+            <h3 class="perf-h3"><i data-lucide="line-chart"></i>延迟历史（每次自检累计）</h3>
+            <div id="perf-spark" class="spark-chart"></div>
+          </section>
+        </section>
+
+        <!-- ============ 应用管理页 ============ -->
+        <section id="page-apps" class="page" data-page="apps" hidden>
+          <div class="page-head">
+            <h2>应用管理</h2>
+            <p>维护外网域名与内网服务的映射</p>
+          </div>
+
+          <section class="apps-panel">
+            <div class="panel-head">
+              <h2><i data-lucide="layout-grid"></i>域名应用</h2>
+              <span id="app-count" class="count">0 个</span>
+            </div>
+
+            <div class="app-filter">
+              <input id="app-search" type="search" placeholder="搜索名称 / 前缀 / 域名 / 目标" autocapitalize="off" autocorrect="off" spellcheck="false" />
+              <select id="app-group-filter" aria-label="按分组筛选">
+                <option value="">全部分组</option>
+              </select>
+              <button id="app-health-btn" class="btn btn-secondary" type="button" title="逐个探测 nas/cdn 域名可达性">
+                <i data-lucide="heart-pulse"></i><span>连通自检</span>
+              </button>
+            </div>
+
+            <form id="app-form" class="app-form">
+              <div class="app-fields">
+                <label>
+                  应用名称
+                  <input id="app-name" type="text" placeholder="例如：博客" />
+                </label>
+                <label>
+                  域名前缀
+                  <input id="app-prefix" type="text" placeholder="example" autocapitalize="off" autocorrect="off" spellcheck="false" title="如 example → example.nas.alanmaster.top" />
+                </label>
+                <label>
+                  内网服务
+                  <input id="app-target" type="text" placeholder="192.168.1.5:8080" autocapitalize="off" autocorrect="off" spellcheck="false" />
+                </label>
+                <label>
+                  分组（可选）
+                  <input id="app-group" type="text" placeholder="如：影音 / 工具" />
+                </label>
+              </div>
+              <div class="app-form-switches">
+                <label class="toggle" title="是否反代（写入 Lucky 子规则）">
+                  <input id="app-lucky-enabled" type="checkbox" checked />
+                  反代
+                </label>
+                <label class="toggle" title="是否加速（创建 ESA 加速域名并同步 Lucky CNAME；回源规则由用户管理）">
+                  <input id="app-esa-enabled" type="checkbox" checked />
+                  加速
+                </label>
+                <label class="toggle" title="仅控制本应用子规则的 BasicAuth。如 Lucky 服务端「系统设置-安全」开启了全局 WebUI 鉴权，仍会弹窗，请到 Lucky 后台关闭。">
+                  <input id="app-web-auth" type="checkbox" />
+                  网页认证
+                </label>
+              </div>
+              <button id="add-app-submit" class="btn btn-secondary" type="submit">
+                <i data-lucide="plus"></i>
+                <span id="add-app-submit-label">添加</span>
+              </button>
+            </form>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>状态</th>
+                    <th>应用</th>
+                    <th>nas 域名</th>
+                    <th>cdn 域名</th>
+                    <th>内网服务</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="app-table-body"></tbody>
+              </table>
+            </div>
+
+            <div id="app-health-results" class="health-results" hidden></div>
+          </section>
+
+          <section class="existing-panel">
+            <div class="panel-head">
+              <h2><i data-lucide="database"></i>现存规则</h2>
+              <div class="existing-tools">
+                <div class="segmented" role="radiogroup" aria-label="规则来源">
+                  <label class="seg-option">
+                    <input type="radio" name="existing-source" value="lucky" checked />
+                    <span>Lucky</span>
+                  </label>
+                  <label class="seg-option">
+                    <input type="radio" name="existing-source" value="esa" />
+                    <span>ESA</span>
+                  </label>
+                </div>
+                <button id="existing-enable-all" class="btn btn-secondary" type="button" title="给所有未开通的 Lucky 规则开通 ESA">
+                  <i data-lucide="rocket"></i>
+                  <span>全部开通</span>
+                </button>
+                <button id="existing-refresh" class="btn btn-ghost icon-only" type="button" title="刷新现存规则" aria-label="刷新现存规则">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+              </div>
+            </div>
+            <div id="existing-rules-body" class="table-wrap"></div>
+          </section>
+        </section>
+
+        <!-- ============ 设置页 ============ -->
+        <section id="page-settings" class="page" data-page="settings" hidden>
+          <div class="page-head">
+            <h2>设置</h2>
+            <p>Lucky、ESA 与回源网关连接参数</p>
+          </div>
+
+          <div class="settings-grid">
+            <section class="settings-card">
+              <h2><i data-lucide="plug"></i>Lucky</h2>
+              <label>
+                后台地址
+                <input id="lucky-base-url" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="http://127.0.0.1:16601" />
+              </label>
+              <label>
+                安全入口路径
+                <input id="lucky-path-prefix" type="text" autocomplete="off" placeholder="/你的安全入口（没有留空）" />
+              </label>
+              <label>
+                OpenToken（Lucky 后台「设置-安全」生成；通过 OpenToken 请求头鉴权）
+                <input id="lucky-open-token" type="password" autocomplete="off" />
+              </label>
+              <div class="field-row">
+                <label>
+                  账号（无 OpenToken 时使用）
+                  <input id="lucky-account" type="text" autocomplete="username" />
+                </label>
+                <label>
+                  密码
+                  <input id="lucky-password" type="password" autocomplete="current-password" />
+                </label>
+              </div>
+              <button id="lucky-test" class="btn btn-secondary" type="button">
+                <i data-lucide="plug-zap"></i>
+                <span>测试连接</span>
+              </button>
+            </section>
+
+            <section class="settings-card">
+              <h2><i data-lucide="lock"></i>Lucky 网页认证（BasicAuth）</h2>
+              <p class="settings-tip">开启后该服务需输入用户名密码；可被应用表单的「网页认证」开关启用（多应用共享同一套凭据）。</p>
+              <label class="toggle">
+                <input id="basic-auth-enabled" type="checkbox" />
+                开启网页认证
+              </label>
+              <div id="basic-auth-users" class="basic-auth-list"></div>
+              <button id="basic-auth-add" class="btn btn-secondary" type="button">
+                <i data-lucide="user-plus"></i>
+                <span>添加用户</span>
+              </button>
+            </section>
+
+            <section class="settings-card">
+              <h2><i data-lucide="globe"></i>阿里云 ESA</h2>
+              <label>
+                AccessKey ID
+                <input id="esa-access-key-id" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+              </label>
+              <label>
+                AccessKey Secret
+                <input id="esa-access-key-secret" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+              </label>
+              <div class="field-row site-pick">
+                <label>
+                  站点
+                  <select id="esa-site-select"></select>
+                </label>
+                <button id="esa-load-sites" class="btn btn-secondary icon-only" type="button" title="刷新站点列表" aria-label="刷新站点列表">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+              </div>
+              <label>
+                站点 ID
+                <input id="esa-site-id" type="text" inputmode="numeric" autocomplete="off" />
+              </label>
+              <label>
+                站点根域（如 alanmaster.top，用于派生 nas/cdn 子域）
+                <input id="esa-root-domain" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="alanmaster.top" />
+              </label>
+            </section>
+
+            <section class="settings-card">
+              <h2><i data-lucide="network"></i>回源网关</h2>
+              <div class="field-row">
+                <label>
+                  监听地址
+                  <input id="gateway-listen-ip" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+                </label>
+                <label>
+                  端口（TLS）
+                  <input id="gateway-listen-port" type="number" min="1" max="65535" inputmode="numeric" />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  回源协议
+                  <select id="gateway-origin-scheme">
+                    <option value="http">http（推荐）</option>
+                    <option value="https">https</option>
+                    <option value="follow">follow</option>
+                  </select>
+                </label>
+                <label>
+                  回源 http 端口（follow 时用）
+                  <input id="gateway-origin-http-port" type="number" min="1" max="65535" inputmode="numeric" />
+                </label>
+              </div>
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input id="gateway-enable-tls" type="checkbox" />
+                  启用 TLS 监听
+                </label>
+                <label class="toggle">
+                  <input id="gateway-origin-verify" type="checkbox" />
+                  校验回源证书
+                </label>
+              </div>
+              <label>
+                回源超时（秒）
+                <input id="gateway-read-timeout" type="number" min="1" max="300" inputmode="numeric" />
+              </label>
+            </section>
+
+            <section class="settings-card">
+              <h2><i data-lucide="shield"></i>面板访问</h2>
+              <p class="settings-tip">开启后访问面板需要口令（浏览器记住一次，刷新后需重新输入）。局域网暴露时建议开启。</p>
+              <div class="field-row">
+                <label>
+                  当前状态
+                  <input id="panel-token-status" type="text" disabled placeholder="未开启" />
+                </label>
+                <div class="settings-btns">
+                  <button id="panel-token-gen" class="btn btn-secondary" type="button">
+                    <i data-lucide="key-round"></i>
+                    <span>生成口令</span>
+                  </button>
+                  <button id="panel-token-clear" class="btn btn-ghost" type="button">
+                    <i data-lucide="unlock"></i>
+                    <span>关闭</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-card">
+              <h2><i data-lucide="history"></i>维护</h2>
+              <p class="settings-tip">部署前自动保存配置快照，误操作可回滚；巡检对比面板配置与实际 Lucky/ESA 状态。</p>
+              <div class="settings-btns">
+                <button id="audit-run" class="btn btn-secondary" type="button">
+                  <i data-lucide="search-check"></i>
+                  <span>一致性巡检</span>
+                </button>
+                <button id="port-precheck" class="btn btn-secondary" type="button" title="检查 Lucky 规则监听端口冲突">
+                  <i data-lucide="waypoints"></i>
+                  <span>端口预检</span>
+                </button>
+                <button id="snapshots-refresh" class="btn btn-ghost" type="button">
+                  <i data-lucide="refresh-cw"></i>
+                  <span>刷新快照</span>
+                </button>
+              </div>
+              <div id="snapshot-list" class="snapshot-list">
+                <div class="empty-state"><i data-lucide="folder-open"></i><span>暂无快照</span></div>
+              </div>
+              <div id="audit-result" class="audit-result" hidden></div>
+            </section>
+          </div>
+
+          <div class="settings-save">
+            <button id="save-config" class="btn btn-primary" type="button">
+              <i data-lucide="save"></i>
+              <span>保存配置</span>
+            </button>
+            <div class="settings-save-group">
+              <button id="export-config" class="btn btn-secondary" type="button" title="导出完整配置（含凭据）用于备份/迁移">
+                <i data-lucide="download"></i>
+                <span>导出配置</span>
+              </button>
+              <button id="import-config" class="btn" type="button" title="从 JSON 文件导入配置并覆盖当前">
+                <i data-lucide="upload"></i>
+                <span>导入配置</span>
+              </button>
+              <input id="import-file" type="file" accept="application/json,.json" hidden />
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 日志页 ============ -->
+        <section id="page-logs" class="page" data-page="logs" hidden>
+          <div class="page-head">
+            <h2>执行日志</h2>
+            <button id="clear-logs" class="btn btn-ghost" type="button">
+              <i data-lucide="eraser"></i>
+              <span>清空</span>
+            </button>
+          </div>
+
+          <section class="logs-panel">
+            <ol id="logs"></ol>
+          </section>
+        </section>
+
+      </main>
+      </div>
+    </div>
+
+    <!-- 二维码弹窗 -->
+    <div id="qr-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="访问二维码">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3><i data-lucide="qr-code"></i>访问二维码</h3>
+          <button type="button" class="btn btn-ghost icon-only" data-close-qr aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="qr-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- ESA 记录编辑弹窗 -->
+    <div id="esa-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="编辑 ESA 记录">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3><i data-lucide="edit-3"></i><span id="esa-modal-title">编辑 ESA 记录</span></h3>
+          <button type="button" class="btn btn-ghost icon-only" data-close-esa aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="esa-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- 自定义确认弹窗（替换 window.confirm，统一交互语言） -->
+    <div id="confirm-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+      <div class="modal-card confirm-card">
+        <div class="modal-head">
+          <h3 id="confirm-title"></h3>
+          <button type="button" class="btn btn-ghost icon-only" data-confirm-close aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="confirm-body" class="confirm-body"></div>
+          <div class="confirm-actions">
+            <button type="button" class="btn btn-ghost" data-confirm-cancel>取消</button>
+            <button type="button" class="btn btn-primary" data-confirm-ok>确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全局 toast 通知 -->
+    <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="/vendor/qrcode.min.js"></script>
+    <script src="/vendor/lucide.min.js"></script>
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+config.json
+data/
+snapshots/
+*.log
+*.corrupt-*.bak
+*.backup-*.json
+.DS_Store
+Thumbs.db
+*.swp

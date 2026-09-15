@@ -1,0 +1,18 @@
+{
+  "name": "lucky-esa-panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One-click local Lucky reverse proxy + Alibaba Cloud ESA origin configuration panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@alicloud/alidns20150109": "^4.6.1",
+    "@alicloud/esa20240910": "^3.14.1",
+    "express": "^5.1.0",
+    "lucide": "^1.45.0",
+    "qrcode": "^1.5.4"
+  }
+}
