@@ -7,7 +7,7 @@ import { appendLog, clearLogs, confirmDialog, copyText, openDomain, refreshIcons
 import { importLuckyRule, enableEsaForRule, enableAllEsa, editEsaRecord, deleteEsaRecord, loadExistingRules, renderExistingRules } from './existing.js';
 import { refreshQuickStart } from './quickstart.js';
 import { refreshSummary } from './summary.js';
-import { refreshDdns } from './ddns.js';
+import { bindDdnsDeleteHandler, refreshDdns } from './ddns.js';
 import { bindMaintenance, fixAudit, refreshSnapshots, runAudit, runPortPrecheck } from './maintenance.js';
 import { initBasicAuth, renderBasicAuth } from './settings.js';
 
@@ -485,6 +485,7 @@ function bindEvents() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   bindEvents();
+  bindDdnsDeleteHandler();
   initTheme();
   navigate();
   document.addEventListener('config-changed', renderApps);

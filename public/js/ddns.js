@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { appendLog, confirmDialog, escapeHtml } from './ui.js';
+import { appendLog, confirmDialog, escapeHtml, refreshIcons, showToast } from './ui.js';
 
 // 清除公网解析残留：按前缀直连 alidns 删除对应解析记录
 // 用于清理「已删除应用/ESA 记录后仍残留的 alidns 解析」
@@ -57,6 +57,11 @@ function renderTaskCard(task) {
         <td class="mono" title="子域" data-label="子域">${escapeHtml(r.subDomain || '')}</td>
         <td class="mono" title="类型" data-label="类型">${escapeHtml(r.type || '')}</td>
         <td class="mono" title="recordKey=${escapeHtml(r.key || '')}" data-label="recordKey"><span class="mono-key">${escapeHtml(r.key || '—')}</span></td>
+        <td class="ddns-action" data-label="操作">
+          <button type="button" class="btn" data-ddns-record-delete data-task-key="${escapeHtml(task.taskKey || '')}" data-record-key="${escapeHtml(r.key || '')}" data-sub-domain="${escapeHtml(r.subDomain || '')}" data-domain-name="${escapeHtml(r.domainName || '')}" data-type="${escapeHtml(r.type || '')}" title="从 Lucky DDNS 任务中移除此记录（不删 alidns 公网解析）">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </td>
       </tr>`,
     )
     .join('');
@@ -82,10 +87,65 @@ function renderTaskCard(task) {
         <span class="ddns-task-preview">${escapeHtml(summary + more)}</span>
       </summary>
       <table class="ddns-records">
-        <thead><tr><th>子域</th><th>类型</th><th>recordKey</th></tr></thead>
+        <thead><tr><th>子域</th><th>类型</th><th>recordKey</th><th class="ddns-action-th">操作</th></tr></thead>
         <tbody>${recordRows}</tbody>
       </table>
     </details>`;
+}
+
+/* ---------- DDNS 记录删除：dryRun 预览 → 确认 → 真删 ---------- */
+
+async function handleDdnsRecordDelete(btn) {
+  const recordKey = btn.dataset.recordKey;
+  const subDomain = btn.dataset.subDomain;
+  const domainName = btn.dataset.domainName;
+  const type = btn.dataset.type;
+  if (!recordKey) {
+    showToast('记录缺少 recordKey，无法删除', 'err');
+    return;
+  }
+  const fqdn = subDomain && domainName ? `${subDomain}.${domainName}` : recordKey;
+  // 第一步：dryRun 预览（后端 record-delete 支持 ?dryRun=1 返回将移除的记录数 + 详情，不写盘）
+  let preview;
+  try {
+    preview = await api.recordDeleteDdns(recordKey, { dryRun: true });
+  } catch (error) {
+    appendLog('DDNS 记录删除', 'error', error.message, { 记录: fqdn });
+    showToast(`预览失败：${error.message}`, 'err');
+    return;
+  }
+  if (!preview.ok) {
+    appendLog('DDNS 记录删除', 'error', preview.error || '预览失败', { 记录: fqdn });
+    showToast(preview.error || '预览失败', 'err');
+    return;
+  }
+  const lines = [
+    `Lucky 任务：${preview.taskKey || '—'}`,
+    `将移除 ${preview.records?.length || 0} 条匹配记录：`,
+    ...(preview.records || []).map((r) => `  · ${r.subDomain || ''}.${domainName || r.domain || ''} (${r.type || type || ''})`),
+    '',
+    '提示：仅清理 Lucky DDNS 任务条目，不会删除 alidns 公网解析。',
+  ].filter((l) => l !== '' || true).join('\n');
+  const ok = await confirmDialog({
+    title: '从 Lucky DDNS 任务中移除记录',
+    message: `确认移除以下 DDNS 记录？\n\n${lines}\n\n继续？`,
+    okLabel: '移除',
+    danger: true,
+  });
+  if (!ok) {
+    appendLog('DDNS 记录删除', 'warn', '用户取消', { 记录: fqdn });
+    return;
+  }
+  // 第二步：真删
+  try {
+    const result = await api.recordDeleteDdns(recordKey);
+    appendLog('DDNS 记录删除', 'ok', `已移除 ${result.removed || 0} 条`, { 记录: fqdn });
+    showToast(`已移除 ${result.removed || 0} 条 DDNS 记录`, 'ok');
+    refreshDdns();
+  } catch (error) {
+    appendLog('DDNS 记录删除', 'error', error.message, { 记录: fqdn });
+    showToast(`删除失败：${error.message}`, 'err');
+  }
 }
 
 export async function refreshDdns() {
@@ -105,4 +165,16 @@ export async function refreshDdns() {
     container.innerHTML = `<div class="empty-state"><i data-lucide="alert-circle"></i><span>DDNS 任务加载失败：${escapeHtml(error.message)}</span></div>`;
     window.lucide?.createIcons();
   }
+}
+
+// 记录删除按钮：事件委托（每次刷新后重绑——刷新时 innerHTML 被替换，原监听丢失）
+export function bindDdnsDeleteHandler() {
+  const container = document.getElementById('ddns-tasks');
+  if (!container || container._deleteBound) return;
+  container._deleteBound = true;
+  container.addEventListener('click', (event) => {
+    const btn = event.target.closest('button[data-ddns-record-delete]');
+    if (!btn) return;
+    handleDdnsRecordDelete(btn);
+  });
 }

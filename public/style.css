@@ -1904,6 +1904,10 @@ details.ddns-sub > summary.ddns-sub-head:hover {
   background: var(--danger-soft);
   color: var(--danger);
 }
+.ddns-action-th {
+  width: 56px;
+  text-align: right;
+}
 
 .ddns-toolbar {
   display: flex;
