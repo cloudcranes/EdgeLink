@@ -1523,9 +1523,10 @@ td.primary {
 
 .app-switches {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  align-items: flex-start;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .mini-toggle {
