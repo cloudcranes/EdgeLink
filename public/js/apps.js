@@ -2,20 +2,41 @@ import { api } from './api.js';
 import { cdnDomainFor, fillFormFromConfig, getRootDomain, nasDomainFor, saveConfig, setConfig, state } from './state.js';
 import { appendLog, confirmDialog, copyText, escapeHtml, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
 import { refreshSummary } from './summary.js';
-
 const $ = (id) => document.getElementById(id);
 
-// 应用状态 badge：live=已就绪 ok / building=部署中 warn / failed=失败 danger / pending=待同步 muted
-function renderAppStatusBadge(status) {
-  const map = {
-    live: { cls: 'ok', text: '已就绪', icon: 'check-circle-2' },
-    building: { cls: 'warn', text: '部署中', icon: 'loader-circle' },
-    failed: { cls: 'danger', text: '失败', icon: 'x-circle' },
-    pending: { cls: 'muted', text: '待同步', icon: 'circle-dashed' },
-  };
-  const s = map[status] || map.pending;
-  return `<span class="badge sm ${s.cls}"><i data-lucide="${s.icon}" class="badge-icon"></i>${s.text}</span>`;
+// 侧边抽屉：openDrawer/closeDrawer 供 apps.js / existing.js / 后续模块复用
+export function openDrawer() {
+  const drawer = $('drawer');
+  const backdrop = $('drawer-backdrop');
+  if (!drawer || !backdrop) return;
+  drawer.hidden = false;
+  backdrop.hidden = false;
+  // 强制 reflow 触发动画
+  drawer.offsetHeight; // eslint-disable-line no-unused-expressions
+  backdrop.offsetHeight;
+  requestAnimationFrame(() => {
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+  });
 }
+export function closeDrawer() {
+  const drawer = $('drawer');
+  const backdrop = $('drawer-backdrop');
+  if (!drawer || !backdrop) return;
+  drawer.classList.remove('open');
+  backdrop.classList.remove('open');
+  setTimeout(() => {
+    drawer.hidden = true;
+    backdrop.hidden = true;
+  }, 250);
+}
+export function isDrawerOpen() {
+  return !!$('drawer')?.classList.contains('open');
+}
+
+// 应用状态文本 + 图标
+const APP_STATUS_TEXT = { live: '已就绪', building: '部署中', failed: '失败', pending: '待同步' };
+const APP_STATUS_ICON = { live: 'check-circle-2', building: 'loader-circle', failed: 'x-circle', pending: 'circle-dashed' };
 
 export function renderApps() {
   const apps = state.config?.apps || [];
@@ -43,78 +64,50 @@ export function renderApps() {
   });
 
   $('app-count').textContent = apps.length > 0 && visible.length !== apps.length ? `${visible.length}/${apps.length} 个` : `${apps.length} 个`;
-  const body = $('app-table-body');
+  const grid = $('app-cards');
+  if (!grid) return;
   if (visible.length === 0) {
-    body.innerHTML = `
-      <tr class="empty-row"><td colspan="5">
-        <div class="empty-state">
-          <i data-lucide="${apps.length === 0 ? 'inbox' : 'search-x'}"></i>
-          <span>${apps.length === 0 ? '还没有应用，先在上方添加一个域名。' : '没有匹配的应用，换个关键词或分组试试。'}</span>
-        </div>
-      </td></tr>`;
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <i data-lucide="${apps.length === 0 ? 'inbox' : 'search-x'}"></i>
+        <span>${apps.length === 0 ? '还没有应用，先在上方添加一个域名。' : '没有匹配的应用，换个关键词或分组试试。'}</span>
+      </div>`;
     refreshIcons();
     return;
   }
-  body.innerHTML = visible
-    .map((app) => {
-      const luckyOn = app.luckyEnabled !== false;
-      const esaOn = app.esaEnabled !== false;
+  grid.innerHTML = visible
+    .map((app, idx) => {
+      const status = app.status || 'pending';
+      const isError = status === 'failed' || (app.lastError && (status === 'building' || status === 'pending'));
+      const nas = nasDomainFor(app, root);
+      const cdn = cdnDomainFor(app, root);
+      const showDomain = cdn || nas || app.target || '—';
+      const statusText = APP_STATUS_TEXT[status] || APP_STATUS_TEXT.pending;
       return `
-        <tr data-app-id="${escapeHtml(app.id)}" class="app-row-clickable">
-          <td data-label="状态">${renderAppStatusBadge(app.status || 'pending')}</td>
-          <td data-label="开关">
-            <div class="app-switches">
-              <label class="mini-toggle" title="是否反代（写入 Lucky 子规则）">
-                <input type="checkbox" data-switch="luckyEnabled" data-id="${escapeHtml(app.id)}" ${luckyOn ? 'checked' : ''} />
-                <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
-                <span class="mini-toggle-label">反代</span>
-              </label>
-              <label class="mini-toggle" title="是否加速（ESA 加速域名 + 回源）">
-                <input type="checkbox" data-switch="esaEnabled" data-id="${escapeHtml(app.id)}" ${esaOn ? 'checked' : ''} />
-                <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
-                <span class="mini-toggle-label">加速</span>
-              </label>
-              <label class="mini-toggle" title="仅控制本子规则 BasicAuth。若 Lucky 服务端全局 WebUI 鉴权开启，仍会弹窗（请到 Lucky 后台「系统设置-安全」关闭）">
-                <input type="checkbox" data-switch="webAuth" data-id="${escapeHtml(app.id)}" ${app.webAuth === true ? 'checked' : ''} />
-                <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
-                <span class="mini-toggle-label">认证</span>
-              </label>
-            </div>
-          </td>
-          <td class="primary" data-label="应用">${escapeHtml(app.name)}</td>
-          <td class="row-detail-hint" data-label="">
-            <span class="row-detail-hint-icon"><i data-lucide="chevron-right"></i></span>
-          </td>
-          <td data-label="操作">
-            <div class="row-actions">
-              <button class="btn" type="button" data-action="copy" data-domain="${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}" title="复制 cdn 加速域名">
-                <i data-lucide="copy"></i>
-                <span>复制</span>
-              </button>
-              <button class="btn" type="button" data-action="open" data-domain="${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}" data-port="${escapeHtml(state.config?.gateway?.listenPort || '')}" title="访问 nas 域名（带 Lucky 端口）">
-                <i data-lucide="external-link"></i>
-              </button>
-              <button class="btn" type="button" data-action="deploy" data-id="${escapeHtml(app.id)}" title="同步此应用">
-                <i data-lucide="refresh-cw"></i>
-                <span>同步</span>
-              </button>
-              <div class="row-menu">
-                <button class="btn" type="button" data-action="menu" title="更多操作" aria-label="更多操作">
-                  <i data-lucide="more-horizontal"></i>
-                </button>
-                <div class="row-menu-pop hidden" data-menu="${escapeHtml(app.id)}">
-                  <button type="button" data-action="copy" data-domain="${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}">复制 nas 域名</button>
-                  <button type="button" data-action="qr" data-id="${escapeHtml(app.id)}">访问二维码</button>
-                  <button type="button" data-action="edit" data-id="${escapeHtml(app.id)}">编辑</button>
-                  <button type="button" data-action="delete" data-id="${escapeHtml(app.id)}" class="danger">删除</button>
-                </div>
-              </div>
-            </div>
-          </td>
-        </tr>`;
+        <div class="app-card status-${status}${isError ? ' has-error' : ''}" data-app-id="${escapeHtml(app.id)}" style="animation-delay:${idx * 50}ms" role="button" tabindex="0" title="点击查看详情">
+          <div class="app-card-head">
+            <h3 class="app-card-name">
+              <span class="app-card-name-dot"></span>
+              <span>${escapeHtml(app.name || app.prefix || '(未命名)')}</span>
+            </h3>
+            <span class="app-card-status-badge ${status}"><i data-lucide="${APP_STATUS_ICON[status] || APP_STATUS_ICON.pending}"></i>${statusText}</span>
+          </div>
+          <div class="app-card-domain" title="${escapeHtml(showDomain)}">${escapeHtml(showDomain)}</div>
+          ${app.lastError ? `<div class="app-card-error"><i data-lucide="alert-circle"></i>${escapeHtml(app.lastError)}</div>` : ''}
+          <div class="app-card-foot">
+            <button type="button" class="app-card-retest" data-card-action="retest" data-id="${escapeHtml(app.id)}" title="重新探测 cdn 可达性">
+              <i data-lucide="refresh-cw"></i><span>重试</span>
+            </button>
+            <button type="button" class="app-card-menu" data-card-action="menu" data-id="${escapeHtml(app.id)}" title="更多操作" aria-label="更多操作">
+              <i data-lucide="more-horizontal"></i>
+            </button>
+          </div>
+        </div>`;
     })
     .join('');
   refreshIcons();
+  // 同步刷新异常悬浮按钮（依赖 app.status / lastError）
+  refreshSummary().catch(() => {});
 }
 
 export async function addOrUpdateApp(event) {
@@ -455,7 +448,7 @@ export function closeQrModal() {
   $('qr-modal')?.classList.add('hidden');
 }
 
-/* ---------- 应用详情弹窗 ---------- */
+/* ---------- 应用详情侧边抽屉 ---------- */
 
 export function openAppDetailModal(appId) {
   const app = (state.config?.apps || []).find((a) => a.id === appId);
@@ -464,11 +457,13 @@ export function openAppDetailModal(appId) {
   const nas = nasDomainFor(app, root);
   const cdn = cdnDomainFor(app, root);
   const port = state.config?.gateway?.listenPort || '';
-  $('app-detail-modal-title').textContent = app.name || app.prefix || '应用详情';
-  const body = $('app-detail-modal-body');
-  body.innerHTML = `
+  $('drawer-title-text').textContent = app.name || app.prefix || '应用详情';
+  // 切换标题图标为 layout-grid（drawer 默认）
+  const titleIcon = document.querySelector('#drawer-title svg');
+  if (titleIcon) titleIcon.setAttribute('data-lucide', 'layout-grid');
+  $('drawer-body').innerHTML = `
     <dl class="kv">
-      <dt>状态</dt><dd>${renderAppStatusBadge(app.status || 'pending')} ${app.lastError ? `<span class="ddns-badge warn" style="margin-left:6px">${escapeHtml(app.lastError)}</span>` : ''}</dd>
+      <dt>状态</dt><dd>${`<span class="app-card-status-badge ${app.status || 'pending'}"><i data-lucide="${APP_STATUS_ICON[app.status] || APP_STATUS_ICON.pending}"></i>${APP_STATUS_TEXT[app.status] || APP_STATUS_TEXT.pending}</span>`} ${app.lastError ? `<span class="ddns-badge warn" style="margin-left:6px">${escapeHtml(app.lastError)}</span>` : ''}</dd>
       <dt>上次探测</dt><dd>${escapeHtml(app.lastCheckedAt || '—')}</dd>
       <dt>分组</dt><dd>${escapeHtml(app.group || '—')}</dd>
       <dt>域名前缀</dt><dd class="mono">${escapeHtml(app.prefix || '')}</dd>
@@ -476,36 +471,54 @@ export function openAppDetailModal(appId) {
       <dt>cdn 加速域名</dt><dd class="mono">${escapeHtml(cdn || '—')}</dd>
       <dt>内网服务</dt><dd class="mono">${escapeHtml(app.target || '')}</dd>
     </dl>
-    <div class="modal-actions">
-      <button type="button" class="btn" data-app-detail-action="copy" data-target="nas" data-domain="${escapeHtml(nas || '')}" title="复制 nas 域名">
-        <i data-lucide="copy"></i><span>复制 nas</span>
-      </button>
-      <button type="button" class="btn" data-app-detail-action="copy" data-target="cdn" data-domain="${escapeHtml(cdn || '')}" title="复制 cdn 域名">
-        <i data-lucide="copy"></i><span>复制 cdn</span>
-      </button>
-      <button type="button" class="btn" data-app-detail-action="open" data-domain="${escapeHtml(nas || '')}" data-port="${escapeHtml(port)}" title="打开 nas（带端口）" ${nas ? '' : 'disabled'}>
-        <i data-lucide="external-link"></i><span>打开 nas</span>
-      </button>
-      <button type="button" class="btn" data-app-detail-action="qr" data-id="${escapeHtml(app.id)}" title="访问二维码">
-        <i data-lucide="qr-code"></i><span>二维码</span>
-      </button>
-      <button type="button" class="btn" data-app-detail-action="deploy" data-id="${escapeHtml(app.id)}" title="同步到 Lucky + ESA">
-        <i data-lucide="refresh-cw"></i><span>同步</span>
-      </button>
-      <button type="button" class="btn" data-app-detail-action="edit" data-id="${escapeHtml(app.id)}" title="编辑">
-        <i data-lucide="edit-3"></i><span>编辑</span>
-      </button>
-      <button type="button" class="btn btn-danger" data-app-detail-action="delete" data-id="${escapeHtml(app.id)}" title="删除">
-        <i data-lucide="trash-2"></i><span>删除</span>
-      </button>
+    <h4 class="drawer-section-title">开关</h4>
+    <div class="drawer-toggles">
+      <label class="mini-toggle" title="是否反代（写入 Lucky 子规则）">
+        <input type="checkbox" data-app-toggle="luckyEnabled" data-id="${escapeHtml(app.id)}" ${app.luckyEnabled !== false ? 'checked' : ''} />
+        <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
+        <span class="mini-toggle-label">反代</span>
+      </label>
+      <label class="mini-toggle" title="是否加速（ESA 加速域名 + 回源）">
+        <input type="checkbox" data-app-toggle="esaEnabled" data-id="${escapeHtml(app.id)}" ${app.esaEnabled !== false ? 'checked' : ''} />
+        <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
+        <span class="mini-toggle-label">加速</span>
+      </label>
+      <label class="mini-toggle" title="仅控制本子规则 BasicAuth">
+        <input type="checkbox" data-app-toggle="webAuth" data-id="${escapeHtml(app.id)}" ${app.webAuth === true ? 'checked' : ''} />
+        <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
+        <span class="mini-toggle-label">网页认证</span>
+      </label>
     </div>
   `;
-  $('app-detail-modal').classList.remove('hidden');
+  $('drawer-foot').innerHTML = `
+    <button type="button" class="btn" data-drawer-action="copy" data-domain="${escapeHtml(nas || '')}" title="复制 nas 域名">
+      <i data-lucide="copy"></i><span>复制 nas</span>
+    </button>
+    <button type="button" class="btn" data-drawer-action="copy" data-domain="${escapeHtml(cdn || '')}" title="复制 cdn 域名">
+      <i data-lucide="copy"></i><span>复制 cdn</span>
+    </button>
+    <button type="button" class="btn" data-drawer-action="open" data-domain="${escapeHtml(nas || '')}" data-port="${escapeHtml(port)}" title="打开 nas（新窗）" ${nas ? '' : 'disabled'}>
+      <i data-lucide="external-link"></i><span>打开 nas</span>
+    </button>
+    <button type="button" class="btn" data-drawer-action="qr" data-id="${escapeHtml(app.id)}" title="访问二维码">
+      <i data-lucide="qr-code"></i><span>二维码</span>
+    </button>
+    <button type="button" class="btn" data-drawer-action="deploy" data-id="${escapeHtml(app.id)}" title="同步到 Lucky + ESA">
+      <i data-lucide="refresh-cw"></i><span>同步</span>
+    </button>
+    <button type="button" class="btn" data-drawer-action="edit" data-id="${escapeHtml(app.id)}" title="编辑">
+      <i data-lucide="edit-3"></i><span>编辑</span>
+    </button>
+    <button type="button" class="btn btn-danger" data-drawer-action="delete" data-id="${escapeHtml(app.id)}" title="删除（破坏性 — 会弹确认）">
+      <i data-lucide="trash-2"></i><span>删除</span>
+    </button>
+  `;
+  openDrawer();
   refreshIcons();
 }
 
 export function closeAppDetailModal() {
-  $('app-detail-modal')?.classList.add('hidden');
+  closeDrawer();
 }
 
 /* ---------- 连通性自检 ---------- */

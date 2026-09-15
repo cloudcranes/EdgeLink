@@ -114,29 +114,65 @@
           </section>
 
           <section class="summary-panel">
-            <div class="panel-head">
-              <h2><i data-lucide="layout-dashboard"></i>资源摘要</h2>
-              <span class="count">根域 <b id="sum-root">(未设置)</b></span>
+            <div class="health-dashboard">
+              <div class="health-dashboard-main">
+                <div class="health-dashboard-label">系统健康度</div>
+                <div class="health-dashboard-big"><span id="health-rate">--</span><span class="percent">%</span></div>
+                <div class="health-dashboard-suffix" id="health-rate-suffix">应用就绪率</div>
+              </div>
+              <div class="health-dashboard-metrics">
+                <div class="health-metric">
+                  <div class="health-metric-icon"><i data-lucide="layout-grid"></i></div>
+                  <div class="health-metric-body">
+                    <div class="health-metric-value" id="health-metric-apps">-</div>
+                    <div class="health-metric-label">应用 / 异常</div>
+                  </div>
+                </div>
+                <div class="health-metric">
+                  <div class="health-metric-icon"><i data-lucide="globe"></i></div>
+                  <div class="health-metric-body">
+                    <div class="health-metric-value" id="health-metric-cdn">-</div>
+                    <div class="health-metric-label">CDN 可达</div>
+                  </div>
+                </div>
+                <div class="health-metric">
+                  <div class="health-metric-icon"><i data-lucide="plug-zap"></i></div>
+                  <div class="health-metric-body">
+                    <div class="health-metric-value" id="health-metric-lucky">-</div>
+                    <div class="health-metric-label">Lucky</div>
+                  </div>
+                </div>
+                <div class="health-metric">
+                  <div class="health-metric-icon"><i data-lucide="shield-check"></i></div>
+                  <div class="health-metric-body">
+                    <div class="health-metric-value" id="health-metric-cert">-</div>
+                    <div class="health-metric-label">证书</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div id="summary-cards" class="summary-cards">
-              <div class="summary-card"><span class="summary-label">面板应用</span><span id="sum-apps" class="summary-value">-</span></div>
-              <div class="summary-card"><span class="summary-label">Lucky 子规则</span><span id="sum-lucky-sub" class="summary-value">-</span></div>
-              <div class="summary-card"><span class="summary-label">ESA 加速域名</span><span id="sum-esa-domain" class="summary-value">-</span></div>
-              <div class="summary-card"><span class="summary-label">Lucky *.nas DDNS</span><span id="sum-lucky-dns" class="summary-value">-</span></div>
-              <div class="summary-card"><span class="summary-label">Lucky *.nas SSL</span><span id="sum-lucky-ssl" class="summary-value">-</span></div>
-              <div class="summary-card"><span class="summary-label">ESA *.cdn 证书</span><span id="sum-esa-cert" class="summary-value">-</span></div>
+
+            <div id="pending-banner" class="pending-banner" hidden>
+              <span class="pending-banner-icon"><i data-lucide="alert-triangle"></i></span>
+              <span class="pending-banner-text" id="pending-banner-text"></span>
+              <button class="btn btn-ghost pending-banner-action" id="pending-banner-action" type="button">
+                <i data-lucide="arrow-right"></i><span>查看</span>
+              </button>
             </div>
           </section>
 
-          <section class="perf-panel">
-            <div class="panel-head">
-              <h2><i data-lucide="activity"></i>性能趋势</h2>
-              <span class="count" id="perf-window">最近 100 次（自动累计）</span>
+          <section class="perf-block">
+            <div class="perf-block-head">
+              <h2 class="perf-block-title"><i data-lucide="activity"></i>性能趋势</h2>
+              <div class="perf-block-range" role="group" aria-label="时间范围">
+                <button class="perf-range-btn" data-perf-range="1h" type="button">1h</button>
+                <button class="perf-range-btn" data-perf-range="24h" type="button">24h</button>
+                <button class="perf-range-btn" data-perf-range="7d" type="button">7d</button>
+              </div>
             </div>
-            <h3 class="perf-h3"><i data-lucide="bar-chart-3"></i>当前连通快照</h3>
-            <div id="perf-bars" class="bar-chart"></div>
-            <h3 class="perf-h3"><i data-lucide="line-chart"></i>延迟历史（每次自检累计）</h3>
-            <div id="perf-spark" class="spark-chart"></div>
+            <div id="perf-line-chart" class="perf-line-chart">
+              <div class="empty-state"><i data-lucide="activity"></i><span>暂无历史数据，多次「连通自检」后自动累计。</span></div>
+            </div>
           </section>
 
           <details class="ddns-panel">
@@ -219,20 +255,7 @@
               </button>
             </form>
 
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>状态</th>
-                    <th>开关</th>
-                    <th>应用</th>
-                    <th class="row-detail-hint-th"></th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody id="app-table-body"></tbody>
-              </table>
-            </div>
+            <div id="app-cards" class="app-cards"></div>
 
             <div id="app-health-results" class="health-results" hidden></div>
           </section>
@@ -569,6 +592,29 @@
 
     <!-- 全局 toast 通知 -->
     <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- 异常应用悬浮按钮（CasaOS 状态灯） -->
+    <button id="exception-fab" class="exception-fab" type="button" title="查看异常应用" aria-label="查看异常应用" hidden>
+      <i data-lucide="alert-triangle"></i>
+      <span>异常</span>
+      <span id="exception-fab-count" class="exception-fab-count">0</span>
+    </button>
+
+    <!-- 侧边抽屉（应用 / 现存规则详情共用） -->
+    <div id="drawer-backdrop" class="drawer-backdrop"></div>
+    <aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-label="详情" hidden>
+      <div class="drawer-head">
+        <h3 class="drawer-title" id="drawer-title">
+          <i data-lucide="layout-grid"></i>
+          <span id="drawer-title-text">详情</span>
+        </h3>
+        <button id="drawer-close" class="drawer-close" type="button" aria-label="关闭">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="drawer-body" id="drawer-body"></div>
+      <div class="drawer-foot" id="drawer-foot"></div>
+    </aside>
 
     <script src="/vendor/qrcode.min.js"></script>
     <script src="/vendor/lucide.min.js"></script>

@@ -1,5 +1,5 @@
 import { api, getToken } from './api.js';
-import { addOrUpdateApp, closeAppDetailModal, closeQrModal, deleteApp, deployApps, editApp, openAppDetailModal, renderApps, runAppHealth, showQrModal } from './apps.js';
+import { addOrUpdateApp, closeAppDetailModal, closeDrawer, closeQrModal, deleteApp, deployApps, editApp, openAppDetailModal, openDrawer, renderApps, runAppHealth, showQrModal } from './apps.js';
 import { renderLatencyBars, renderSparklines } from './charts.js';
 import { fillFormFromConfig, gatherConfig, loadConfig, renderSiteSelect, saveConfig, state } from './state.js';
 import { refreshStatus } from './status.js';
@@ -260,24 +260,53 @@ function bindEvents() {
       document.getElementById('gateway-enable-tls').checked = true;
     }
   });
-  document.getElementById('app-table-body').addEventListener('change', async (event) => {    const input = event.target.closest('input[data-switch]');
-    if (!input) {
+  document.getElementById('app-cards').addEventListener('click', async (event) => {
+    // 卡内按钮：重试 / 三点菜单
+    const cardAction = event.target.closest('[data-card-action]');
+    if (cardAction) {
+      event.stopPropagation();
+      const action = cardAction.dataset.cardAction;
+      const id = cardAction.dataset.id;
+      if (action === 'retest') {
+        // 直接调重试 API（保留旧 render 状态避免闪烁）
+        try {
+          const r = await api.appRecheck(id);
+          if (r.ok) {
+            showToast(`已重新探测：${id}`, 'ok');
+            renderApps();
+          } else {
+            showToast(r.error || '重试失败', 'err');
+          }
+        } catch (error) {
+          showToast(`重试失败：${error.message}`, 'err');
+        }
+      } else if (action === 'menu') {
+        // 打开抽屉（含所有操作）
+        openAppDetailModal(id);
+      }
       return;
     }
-    const { switch: field, id } = input.dataset;
+    // 卡片其余区域：打开抽屉
+    const card = event.target.closest('.app-card');
+    if (card) {
+      openAppDetailModal(card.dataset.appId);
+    }
+  });
+  // 侧边抽屉：应用开关（反代/加速/网页认证）
+  document.getElementById('drawer-body').addEventListener('change', async (event) => {
+    const input = event.target.closest('input[data-app-toggle]');
+    if (!input) return;
+    const field = input.dataset.appToggle;
+    const id = input.dataset.id;
     const apps = state.config?.apps || [];
     const app = apps.find((a) => a.id === id);
-    if (!app) {
-      return;
-    }
+    if (!app) return;
     const previous = app[field];
     app[field] = input.checked;
     try {
       await saveConfig(false);
       setSaveState('已保存', true);
       appendLog('应用开关', 'ok', `${app.name || app.prefix}：${field === 'luckyEnabled' ? '反代' : field === 'esaEnabled' ? '加速' : '网页认证'} ${input.checked ? '开' : '关'}`);
-      // webAuth/luckyEnabled 即时同步到 Lucky 子规则，避免配置已关但 Lucky 仍在生效
-      // luckyEnabled=false 时也尝试同步——这样关掉反代会立即停止 Lucky 反代
       if (field === 'webAuth' || field === 'luckyEnabled') {
         try {
           await api.toggleLuckyProxy(managedProxyKey(id), field, input.checked);
@@ -288,57 +317,17 @@ function bindEvents() {
           appendLog('Lucky 子规则', 'error', `${app.name || app.prefix}：${error.message}`);
         }
       }
+      renderApps();
     } catch (error) {
       input.checked = !input.checked;
       appendLog('应用开关', 'error', error.message);
     }
   });
-
-  document.getElementById('app-table-body').addEventListener('click', async (event) => {
-    const menuButton = event.target.closest('button[data-action="menu"]');
-    if (menuButton) {
-      event.stopPropagation();
-      const pop = menuButton.parentElement.querySelector('.row-menu-pop');
-      const isOpen = !pop.classList.contains('hidden');
-      closeAllRowMenus();
-      if (!isOpen) {
-        pop.classList.remove('hidden');
-      }
-      return;
-    }
-    const button = event.target.closest('button[data-action]');
-    if (!button) {
-      // 非按钮区域点击：行级弹窗（排除 switch 容器）
-      const row = event.target.closest('tr[data-app-id]');
-      if (row && !event.target.closest('.app-switches')) {
-        openAppDetailModal(row.dataset.appId);
-      }
-      return;
-    }
-    const { action, id, domain } = button.dataset;
-    if (action === 'copy') {
-      const ok = await copyText(domain);
-      if (ok) showToast(`已复制 ${domain}`, 'ok');
-      else showToast('复制失败', 'err');
-    } else if (action === 'open') {
-      openDomain(domain, button.dataset.port);
-    } else if (action === 'deploy') {
-      deployApps(id);
-    } else if (action === 'edit') {
-      editApp(id);
-    } else if (action === 'qr') {
-      showQrModal(id);
-    } else if (action === 'delete') {
-      deleteApp(id);
-    }
-    // 行内菜单项点击后收起（菜单按钮分支已提前 return）
-    closeAllRowMenus();
-  });
-  // 应用详情弹窗：内嵌动作按钮（复制/打开/同步/二维码/编辑/删除）
-  document.getElementById('app-detail-modal-body').addEventListener('click', async (event) => {
-    const btn = event.target.closest('button[data-app-detail-action]');
+  // 侧边抽屉：内嵌动作按钮（复制/打开/同步/二维码/编辑/删除）
+  document.getElementById('drawer-foot').addEventListener('click', async (event) => {
+    const btn = event.target.closest('button[data-drawer-action]');
     if (!btn) return;
-    const action = btn.dataset.appDetailAction;
+    const action = btn.dataset.drawerAction;
     const id = btn.dataset.id;
     const domain = btn.dataset.domain;
     if (action === 'copy' && domain) {
@@ -346,20 +335,59 @@ function bindEvents() {
       if (ok) showToast(`已复制 ${domain}`, 'ok');
       else showToast('复制失败', 'err');
     } else if (action === 'open' && domain) {
-      openDomain(domain, btn.dataset.port);
+      // 弹新窗（不离开当前页）
+      const port = btn.dataset.port || '';
+      const url = port ? `https://${domain}:${port}` : `https://${domain}`;
+      window.open(url, '_blank', 'noopener');
     } else if (action === 'deploy') {
-      closeAppDetailModal();
+      closeDrawer();
       deployApps(id);
     } else if (action === 'qr') {
-      closeAppDetailModal();
+      closeDrawer();
       showQrModal(id);
     } else if (action === 'edit') {
-      closeAppDetailModal();
+      closeDrawer();
       editApp(id);
     } else if (action === 'delete') {
-      closeAppDetailModal();
+      closeDrawer();
       deleteApp(id);
     }
+  });
+  // 抽屉关闭（背景 / 关闭按钮 / Esc）
+  document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+  document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeDrawer();
+      closeQrModal();
+      closeDdnsRecordModal();
+    }
+  });
+  // 异常悬浮按钮 → 切换到应用 tab 并打开第一个异常 app 的抽屉
+  document.getElementById('exception-fab').addEventListener('click', () => {
+    const firstError = (state.config?.apps || []).find((a) => a.status === 'failed' || (a.lastError && (a.status === 'building' || a.status === 'pending')));
+    if (firstError) {
+      // 切换到应用 tab
+      if (location.hash !== '#/apps') location.hash = '#/apps';
+      openAppDetailModal(firstError.id);
+    }
+  });
+  // 主页待处理条 → 同样跳到第一个异常
+  document.getElementById('pending-banner-action').addEventListener('click', () => {
+    const firstError = (state.config?.apps || []).find((a) => a.status === 'failed' || (a.lastError && (a.status === 'building' || a.status === 'pending')));
+    if (firstError) {
+      if (location.hash !== '#/apps') location.hash = '#/apps';
+      openAppDetailModal(firstError.id);
+    }
+  });
+  // 性能图时间范围切换
+  document.querySelectorAll('.perf-range-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const range = btn.dataset.perfRange;
+      document.querySelectorAll('.perf-range-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      // 触发刷新
+      if (typeof window.__perfSetRange === 'function') window.__perfSetRange(range);
+    });
   });
   document.getElementById('existing-refresh').addEventListener('click', loadExistingRules);
   document.getElementById('existing-enable-all').addEventListener('click', enableAllEsa);
@@ -392,23 +420,10 @@ function bindEvents() {
     if (ok) showToast('链接已复制', 'ok');
     else showToast('复制失败', 'err');
   });
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      closeQrModal();
-      closeDdnsRecordModal();
-      closeAppDetailModal();
-    }
-  });
   // DDNS 解析记录弹窗：关闭（按钮/遮罩）
   document.getElementById('ddns-record-modal').addEventListener('click', (event) => {
     if (event.target.id === 'ddns-record-modal' || event.target.closest('[data-close-ddns-record]')) {
       closeDdnsRecordModal();
-    }
-  });
-  // 应用详情弹窗：关闭（按钮/遮罩）
-  document.getElementById('app-detail-modal').addEventListener('click', (event) => {
-    if (event.target.id === 'app-detail-modal' || event.target.closest('[data-close-app-detail]')) {
-      closeAppDetailModal();
     }
   });
   document.getElementById('existing-rules-body').addEventListener('change', async (event) => {
