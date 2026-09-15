@@ -1,11 +1,12 @@
 import { api } from './api.js';
 import { escapeHtml } from './ui.js';
 
-function setText(id, text, tone) {
+function setText(id, text, tone, title) {
   const el = document.getElementById(id);
   if (!el) return;
   el.textContent = text;
   el.className = `summary-value ${tone || ''}`.trim();
+  if (title) el.title = title;
 }
 
 export async function refreshSummary() {
@@ -18,9 +19,10 @@ export async function refreshSummary() {
     setText('sum-apps', `${s.apps}`, 'ok');
     setText('sum-lucky-sub', `${s.luckySubRules} (${s.luckyPanelProxies} 面板)`, s.luckySubRules ? '' : 'warn');
     setText('sum-esa-domain', `${s.esaDomains} (${s.esaPanelDomains} cdn 加速)`, s.esaDomains ? '' : 'warn');
-    setText('sum-lucky-dns', s.luckyDdnsNasTask ? `*.nas.${rootDomain} ✓` : `缺少 *.nas.${rootDomain}`, s.luckyDdnsNasTask ? 'ok' : 'warn');
-    setText('sum-lucky-ssl', s.luckyNasSsl ? `*.nas.${rootDomain} ✓` : `缺少 *.nas.${rootDomain}`, s.luckyNasSsl ? 'ok' : 'warn');
-    setText('sum-esa-cert', s.esaNasCertificate ? `*.cdn.${rootDomain} ✓` : `缺少 *.cdn.${rootDomain}（手动申请）`, s.esaNasCertificate ? 'ok' : 'warn');
+    // 长文案（完整子域）放 title 提示，值只显示短状态，避免 6 卡高度参差
+    setText('sum-lucky-dns', s.luckyDdnsNasTask ? '✓ 已配置' : '缺少', s.luckyDdnsNasTask ? 'ok' : 'warn', `*.nas.${rootDomain}`);
+    setText('sum-lucky-ssl', s.luckyNasSsl ? '✓ 已配置' : '缺少', s.luckyNasSsl ? 'ok' : 'warn', `*.nas.${rootDomain}`);
+    setText('sum-esa-cert', s.esaNasCertificate ? '✓ 已配置' : '缺少', s.esaNasCertificate ? 'ok' : 'warn', `*.cdn.${rootDomain}${s.esaNasCertificate ? '' : '（请到 ESA 控制台申请）'}`);
     setText('sum-root', rootDomain, s.rootDomain ? '' : 'warn');
   } catch (error) {
     cards.innerHTML = `<div class="empty-state"><i data-lucide="alert-circle"></i><span>资源摘要加载失败：${escapeHtml(error.message)}</span></div>`;

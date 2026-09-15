@@ -82,9 +82,9 @@ export function renderApps() {
             </div>
           </td>
           <td class="primary" data-label="应用">${escapeHtml(app.name)}</td>
-          <td class="mono" data-label="nas 域名">${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}</td>
-          <td class="mono" data-label="cdn 域名">${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}</td>
-          <td class="mono" data-label="内网服务">${escapeHtml(app.target)}</td>
+          <td class="mono" data-label="nas 域名" title="${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}">${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}</td>
+          <td class="mono" data-label="cdn 域名" title="${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}">${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}</td>
+          <td class="mono" data-label="内网服务" title="${escapeHtml(app.target)}">${escapeHtml(app.target)}</td>
           <td data-label="操作">
             <div class="row-actions">
               <button class="btn" type="button" data-action="copy" data-domain="${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}" title="复制 cdn 加速域名">
