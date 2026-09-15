@@ -1792,6 +1792,32 @@ td.primary {
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
+/* DDNS 面板折叠：summary 复用 panel-head 观感 + 右侧 chevron */
+details.ddns-panel > summary.panel-head {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  justify-content: flex-start;
+}
+details.ddns-panel > summary.panel-head::-webkit-details-marker {
+  display: none;
+}
+details.ddns-panel > summary.panel-head .count {
+  margin-left: auto;
+}
+details.ddns-panel > summary.panel-head::after {
+  content: '▾';
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+details.ddns-panel[open] > summary.panel-head::after {
+  transform: rotate(180deg);
+}
+details.ddns-panel > summary.panel-head:hover h2 {
+  color: var(--accent);
+}
 
 .ddns-tasks {
   display: flex;
