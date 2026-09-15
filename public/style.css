@@ -2097,14 +2097,18 @@ details.ddns-sub > summary.ddns-sub-head:hover {
 
 .ddns-records th,
 .ddns-records td {
-  padding: 8px 18px;
+  padding: 6px 12px;
   text-align: left;
   border-top: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
 }
 
 .ddns-records th {
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;

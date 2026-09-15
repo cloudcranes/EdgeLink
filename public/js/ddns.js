@@ -50,11 +50,11 @@ export async function cleanupResidue(rrPrefix, domainName) {
 
 function renderTaskCard(task) {
   const records = task.records || [];
+  // 每条记录共享同一个主域，去掉表格里的"主域"列，把主域放到 task summary 标签里
   const recordRows = records
     .map(
       (r) => `<tr>
         <td class="mono" title="子域" data-label="子域">${escapeHtml(r.subDomain || '')}</td>
-        <td class="mono" title="主域" data-label="主域">${escapeHtml(r.domainName || '')}</td>
         <td class="mono" title="类型" data-label="类型">${escapeHtml(r.type || '')}</td>
         <td class="mono" title="recordKey=${escapeHtml(r.key || '')}" data-label="recordKey"><span class="mono-key">${escapeHtml(r.key || '—')}</span></td>
       </tr>`,
@@ -66,20 +66,23 @@ function renderTaskCard(task) {
     .slice(0, 6)
     .join(', ');
   const more = records.length > 6 ? ` 等 ${records.length} 条` : '';
+  // 同一 task 内所有记录共享的 rootDomain，取自首条记录
+  const sharedRoot = records[0]?.domainName || task.dnsProvider || '';
   return `
-    <details class="ddns-task" open>
+    <details class="ddns-task">
       <summary>
         <span class="ddns-task-name"><i data-lucide="${task.enable ? 'toggle-right' : 'toggle-left'}"></i>${escapeHtml(task.taskName || '(未命名)')}</span>
         <span class="ddns-task-meta">
           <span class="tag">${escapeHtml(task.taskType || '')}</span>
           <span class="tag">${escapeHtml(task.dnsProvider || '')}</span>
-          <span class="tag">${records.length} 条记录</span>
+          ${sharedRoot ? `<span class="tag">${escapeHtml(sharedRoot)}</span>` : ''}
+          <span class="tag">${records.length} 条</span>
           ${task.hasNasWildcard ? '<span class="tag nas-tag">含 *.nas 通配</span>' : ''}
         </span>
         <span class="ddns-task-preview">${escapeHtml(summary + more)}</span>
       </summary>
       <table class="ddns-records">
-        <thead><tr><th>子域</th><th>主域</th><th>类型</th><th>recordKey</th></tr></thead>
+        <thead><tr><th>子域</th><th>类型</th><th>recordKey</th></tr></thead>
         <tbody>${recordRows}</tbody>
       </table>
     </details>`;
