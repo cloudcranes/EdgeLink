@@ -224,10 +224,9 @@
                 <thead>
                   <tr>
                     <th>状态</th>
+                    <th>开关</th>
                     <th>应用</th>
-                    <th>nas 域名</th>
-                    <th>cdn 域名</th>
-                    <th>内网服务</th>
+                    <th class="row-detail-hint-th"></th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -494,6 +493,32 @@
           </button>
         </div>
         <div class="modal-body" id="esa-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- DDNS 公网解析记录详情弹窗 -->
+    <div id="ddns-record-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="解析记录详情">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3><i data-lucide="globe"></i><span id="ddns-record-modal-title">解析记录详情</span></h3>
+          <button type="button" class="btn btn-ghost icon-only" data-close-ddns-record aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="ddns-record-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- 应用详情弹窗 -->
+    <div id="app-detail-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="应用详情">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3><i data-lucide="layout-grid"></i><span id="app-detail-modal-title">应用详情</span></h3>
+          <button type="button" class="btn btn-ghost icon-only" data-close-app-detail aria-label="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="app-detail-modal-body"></div>
       </div>
     </div>
 

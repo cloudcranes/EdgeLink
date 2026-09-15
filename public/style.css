@@ -1171,18 +1171,28 @@ select:hover {
 }
 
 .ddns-status-row {
-  display: grid;
-  grid-template-columns: 1.4fr 0.5fr 1.2fr 0.7fr 0.6fr 0.6fr 0.9fr;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 7px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
 }
 
-.ddns-domain {
+.ddns-status-row:hover,
+.ddns-status-row:focus-visible {
+  background: var(--surface-3);
+  border-color: var(--accent-border);
+  outline: none;
+}
+
+.ddns-status-row .ddns-domain {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--text);
@@ -1191,25 +1201,32 @@ select:hover {
   white-space: nowrap;
 }
 
-.ddns-type {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+.ddns-status-row .ddns-type-badge {
+  flex-shrink: 0;
 }
 
-.ddns-task {
-  color: var(--muted);
-  font-size: 11.5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ddns-status-row .ddns-state {
+  flex-shrink: 0;
 }
 
-.ddns-col {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+.ddns-status-row .ddns-state-icon {
+  flex-shrink: 0;
   color: var(--muted);
-  text-align: center;
+  display: inline-flex;
+}
+
+.ddns-status-row .ddns-state-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 旧 7 列布局的兼容：ddns-task / ddns-enable / ddns-col 在新结构中不再使用，
+   但保留定义以防外部缓存的 CSS 触发解析告警 */
+.ddns-task,
+.ddns-type,
+.ddns-col,
+.ddns-enable {
+  display: none;
 }
 
 @media (max-width: 720px) {
@@ -2832,21 +2849,12 @@ details.ddns-sub > summary.ddns-sub-head:hover {
     word-break: break-word;
   }
 
-  /* ddns 状态行：7 列 grid 在窄屏挤成一坨，转为堆叠 */
+  /* ddns 状态行：紧凑行在窄屏保持单行紧凑 */
   .ddns-status-row {
-    grid-template-columns: 1fr;
-    gap: 4px 0;
-    padding: 10px 12px;
+    padding: 9px 12px;
   }
-  .ddns-status-row > .ddns-domain {
+  .ddns-status-row .ddns-domain {
     font-size: 13px;
-  }
-  .ddns-status-row > .ddns-task,
-  .ddns-status-row > .ddns-type {
-    font-size: 11.5px;
-  }
-  .ddns-status-row > .ddns-badge {
-    justify-self: start;
   }
 
   /* ddns 任务卡 summary 不换行截断 */
@@ -3370,10 +3378,72 @@ tbody tr {
   transition: background 0.15s ease;
 }
 
+/* 应用行可点击：行级弹窗入口；排除 .app-switches 区域（toggle 优先） */
+.table-wrap tbody tr.app-row-clickable {
+  cursor: pointer;
+}
+.table-wrap tbody tr.app-row-clickable:hover {
+  background: var(--surface-2);
+}
+.table-wrap tbody tr.app-row-clickable:focus-visible {
+  outline: none;
+  background: var(--surface-2);
+}
+
+.row-detail-hint {
+  width: 24px;
+  text-align: center;
+  color: var(--muted);
+  padding: 14px 0;
+}
+.row-detail-hint .row-detail-hint-icon {
+  display: inline-flex;
+}
+.row-detail-hint .row-detail-hint-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.row-detail-hint-th {
+  width: 24px;
+}
+
 /* ---------- 摘要卡片：数值等宽对齐 ---------- */
 
 .summary-value {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 弹窗内的键值列表 ---------- */
+
+.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0 0 14px;
+}
+
+.kv dt {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding-top: 1px;
+}
+
+.kv dd {
+  margin: 0;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+/* ---------- 弹窗底部按钮行 ---------- */
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
 /* ---------- 图表行 hover ---------- */

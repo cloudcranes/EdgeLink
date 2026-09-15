@@ -46,7 +46,7 @@ export function renderApps() {
   const body = $('app-table-body');
   if (visible.length === 0) {
     body.innerHTML = `
-      <tr class="empty-row"><td colspan="6">
+      <tr class="empty-row"><td colspan="5">
         <div class="empty-state">
           <i data-lucide="${apps.length === 0 ? 'inbox' : 'search-x'}"></i>
           <span>${apps.length === 0 ? '还没有应用，先在上方添加一个域名。' : '没有匹配的应用，换个关键词或分组试试。'}</span>
@@ -60,7 +60,7 @@ export function renderApps() {
       const luckyOn = app.luckyEnabled !== false;
       const esaOn = app.esaEnabled !== false;
       return `
-        <tr>
+        <tr data-app-id="${escapeHtml(app.id)}" class="app-row-clickable">
           <td data-label="状态">${renderAppStatusBadge(app.status || 'pending')}</td>
           <td data-label="开关">
             <div class="app-switches">
@@ -82,9 +82,9 @@ export function renderApps() {
             </div>
           </td>
           <td class="primary" data-label="应用">${escapeHtml(app.name)}</td>
-          <td class="mono" data-label="nas 域名" title="${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}">${escapeHtml(nasDomainFor(app, getRootDomain(state.config)))}</td>
-          <td class="mono" data-label="cdn 域名" title="${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}">${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}</td>
-          <td class="mono" data-label="内网服务" title="${escapeHtml(app.target)}">${escapeHtml(app.target)}</td>
+          <td class="row-detail-hint" data-label="">
+            <span class="row-detail-hint-icon"><i data-lucide="chevron-right"></i></span>
+          </td>
           <td data-label="操作">
             <div class="row-actions">
               <button class="btn" type="button" data-action="copy" data-domain="${escapeHtml(cdnDomainFor(app, getRootDomain(state.config)))}" title="复制 cdn 加速域名">
@@ -453,6 +453,59 @@ export function showQrModal(appId) {
 
 export function closeQrModal() {
   $('qr-modal')?.classList.add('hidden');
+}
+
+/* ---------- 应用详情弹窗 ---------- */
+
+export function openAppDetailModal(appId) {
+  const app = (state.config?.apps || []).find((a) => a.id === appId);
+  if (!app) return;
+  const root = getRootDomain(state.config);
+  const nas = nasDomainFor(app, root);
+  const cdn = cdnDomainFor(app, root);
+  const port = state.config?.gateway?.listenPort || '';
+  $('app-detail-modal-title').textContent = app.name || app.prefix || '应用详情';
+  const body = $('app-detail-modal-body');
+  body.innerHTML = `
+    <dl class="kv">
+      <dt>状态</dt><dd>${renderAppStatusBadge(app.status || 'pending')} ${app.lastError ? `<span class="ddns-badge warn" style="margin-left:6px">${escapeHtml(app.lastError)}</span>` : ''}</dd>
+      <dt>上次探测</dt><dd>${escapeHtml(app.lastCheckedAt || '—')}</dd>
+      <dt>分组</dt><dd>${escapeHtml(app.group || '—')}</dd>
+      <dt>域名前缀</dt><dd class="mono">${escapeHtml(app.prefix || '')}</dd>
+      <dt>nas 域名</dt><dd class="mono">${escapeHtml(nas || '—')}</dd>
+      <dt>cdn 加速域名</dt><dd class="mono">${escapeHtml(cdn || '—')}</dd>
+      <dt>内网服务</dt><dd class="mono">${escapeHtml(app.target || '')}</dd>
+    </dl>
+    <div class="modal-actions">
+      <button type="button" class="btn" data-app-detail-action="copy" data-target="nas" data-domain="${escapeHtml(nas || '')}" title="复制 nas 域名">
+        <i data-lucide="copy"></i><span>复制 nas</span>
+      </button>
+      <button type="button" class="btn" data-app-detail-action="copy" data-target="cdn" data-domain="${escapeHtml(cdn || '')}" title="复制 cdn 域名">
+        <i data-lucide="copy"></i><span>复制 cdn</span>
+      </button>
+      <button type="button" class="btn" data-app-detail-action="open" data-domain="${escapeHtml(nas || '')}" data-port="${escapeHtml(port)}" title="打开 nas（带端口）" ${nas ? '' : 'disabled'}>
+        <i data-lucide="external-link"></i><span>打开 nas</span>
+      </button>
+      <button type="button" class="btn" data-app-detail-action="qr" data-id="${escapeHtml(app.id)}" title="访问二维码">
+        <i data-lucide="qr-code"></i><span>二维码</span>
+      </button>
+      <button type="button" class="btn" data-app-detail-action="deploy" data-id="${escapeHtml(app.id)}" title="同步到 Lucky + ESA">
+        <i data-lucide="refresh-cw"></i><span>同步</span>
+      </button>
+      <button type="button" class="btn" data-app-detail-action="edit" data-id="${escapeHtml(app.id)}" title="编辑">
+        <i data-lucide="edit-3"></i><span>编辑</span>
+      </button>
+      <button type="button" class="btn btn-danger" data-app-detail-action="delete" data-id="${escapeHtml(app.id)}" title="删除">
+        <i data-lucide="trash-2"></i><span>删除</span>
+      </button>
+    </div>
+  `;
+  $('app-detail-modal').classList.remove('hidden');
+  refreshIcons();
+}
+
+export function closeAppDetailModal() {
+  $('app-detail-modal')?.classList.add('hidden');
 }
 
 /* ---------- 连通性自检 ---------- */
