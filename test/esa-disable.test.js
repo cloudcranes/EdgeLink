@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 
-const src = readFileSync(join(__dirname, '..', 'server.js'), 'utf8');
+const src = readFileSync(join(__dirname, '..', 'lib', 'deploy.js'), 'utf8');
 
 test('disableEsaDomain 函数存在', () => {
   assert.match(src, /async function disableEsaDomain/);

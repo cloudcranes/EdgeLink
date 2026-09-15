@@ -8,3 +8,13 @@ snapshots/
 .DS_Store
 Thumbs.db
 *.swp
+
+# 开发期临时探针/草稿（非产品代码）
+/ddns-cleanup.mjs
+/ddns-probe9.mjs
+/ssl-probe.mjs
+/probe-basicauth.js
+/test.js
+
+# 从 Lucky 项目扒下来的源码参考（产品代码不依赖，仅作研发参考，体积 ~1MB）
+/docs-ref/

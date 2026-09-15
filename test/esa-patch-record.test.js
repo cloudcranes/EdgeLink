@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 
-const src = readFileSync(join(__dirname, '..', 'server.js'), 'utf8');
+const src = readFileSync(join(__dirname, '..', 'routes', 'esa.js'), 'utf8');
 const appsJs = readFileSync(join(__dirname, '..', 'public', 'js', 'apps.js'), 'utf8');
 const existingJs = readFileSync(join(__dirname, '..', 'public', 'js', 'existing.js'), 'utf8');
 const apiJs = readFileSync(join(__dirname, '..', 'public', 'js', 'api.js'), 'utf8');

@@ -57,6 +57,6 @@ test('SRV/CAA/MX 走 other 任务', () => {
 });
 
 test('defaultConfig 包含 lucky.ddnsTasks 字段', () => {
-  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'server.js'), 'utf8');
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'lib', 'config.js'), 'utf8');
   assert.match(src, /ddnsTasks:\s*\{[\s\S]*?ipv6:[\s\S]*?esa:[\s\S]*?other:[\s\S]*?\}/);
 });
