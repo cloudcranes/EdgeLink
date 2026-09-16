@@ -21,24 +21,6 @@
         <h1 id="topbar-title" class="topbar-title">概览</h1>
 
         <div class="topbar-actions">
-          <!-- 全局连接状态条（移到顶栏右侧） -->
-          <div class="status-strip" aria-label="连接状态">
-            <span class="status-item">
-              <span class="status-label"><i data-lucide="plug-zap"></i>Lucky</span>
-              <span id="status-lucky" class="status-value">检测中…</span>
-            </span>
-            <span class="status-item">
-              <span class="status-label"><i data-lucide="globe"></i>ESA</span>
-              <span id="status-esa" class="status-value">检测中…</span>
-            </span>
-            <span class="status-item">
-              <span class="status-label"><i data-lucide="network"></i>回源端口</span>
-              <span id="status-gateway" class="status-value">检测中…</span>
-            </span>
-          </div>
-          <button id="refresh-status" class="btn btn-ghost icon-only" type="button" title="刷新连接状态" aria-label="刷新连接状态">
-            <i data-lucide="refresh-cw"></i>
-          </button>
           <div class="theme-picker">
             <button id="theme-toggle" class="btn btn-ghost icon-only" type="button" title="切换主题" aria-label="切换主题" aria-haspopup="menu" aria-expanded="false">
               <i data-lucide="moon"></i>
@@ -175,16 +157,12 @@
             </div>
           </section>
 
-          <details class="ddns-panel" open>
-            <summary class="panel-head">
+          <section class="ddns-panel">
+            <div class="panel-head">
               <h2><i data-lucide="radio"></i>Lucky DDNS 管理</h2>
-            </summary>
-
-            <details class="ddns-sub">
-              <summary class="ddns-sub-head"><i data-lucide="layers"></i>任务与记录（点击展开）</summary>
-              <div id="ddns-tasks" class="ddns-tasks"></div>
-            </details>
-          </details>
+            </div>
+            <div id="ddns-tasks" class="ddns-tasks"></div>
+          </section>
         </section>
 
         <!-- ============ 应用管理页 ============ -->
