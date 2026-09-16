@@ -21,3 +21,6 @@ Thumbs.db
 
 # 前端布局截图（临时验证产物）
 /.shots/
+
+# CDP 调试临时文件（headless chrome profile + 脚本）
+/.debug/
