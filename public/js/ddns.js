@@ -153,9 +153,18 @@ export async function refreshDdns() {
   if (!container) return;
   try {
     const json = await api.fetchLuckyDdns();
-    const tasks = json.tasks || [];
-    if (tasks.length === 0) {
+    const allTasks = json.tasks || [];
+    // 仅展示面板管理的任务（按名称白名单，大小写不敏感）
+    const allowedNames = ['ipv6', 'esa'];
+    const tasks = allTasks.filter((t) => allowedNames.includes(String(t.taskName || '').trim().toLowerCase()));
+    if (allTasks.length === 0) {
       container.innerHTML = `<div class="empty-state"><i data-lucide="folder-open"></i><span>暂无 Lucky DDNS 任务（在 Lucky 后台手动创建，DDNS 任务 Key 填到「设置 → Lucky → DDNS 任务」即可自动匹配）</span></div>`;
+      window.lucide?.createIcons();
+      return;
+    }
+    if (tasks.length === 0) {
+      const hidden = allTasks.length;
+      container.innerHTML = `<div class="empty-state"><i data-lucide="info"></i><span>无匹配面板管理的任务（仅展示 ipv6 / ESA；当前 Lucky 中 ${hidden} 个任务已隐藏）</span></div>`;
       window.lucide?.createIcons();
       return;
     }
