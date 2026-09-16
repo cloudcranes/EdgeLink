@@ -407,7 +407,8 @@ export async function deployApps(appId = null) {
 function buildQrSvg(text) {
   try {
     if (!window.QRCode || typeof window.QRCode.toString !== 'function') return null;
-    return window.QRCode.toString(text, { type: 'svg', margin: 1, color: { dark: '#111827', light: '#ffffff' } });
+    // margin:0 让 QR 节点尺寸更紧凑（去掉白边）；CSS 用固定宽度 96px
+    return window.QRCode.toString(text, { type: 'svg', margin: 0, color: { dark: '#111827', light: '#ffffff' } });
   } catch {
     return null;
   }
@@ -417,12 +418,19 @@ function qrBlock(label, url) {
   const svg = buildQrSvg(url);
   return `
     <div class="qr-block">
-      <span class="qr-label">${escapeHtml(label)}</span>
-      ${svg ? svg : '<span class="qr-url">二维码生成失败</span>'}
-      <span class="qr-url">${escapeHtml(url)}</span>
-      <button type="button" class="btn" data-qr-copy="${escapeHtml(url)}">
-        <i data-lucide="copy"></i><span>复制链接</span>
-      </button>
+      <div class="qr-block-code">${svg || '<span class="qr-error">二维码生成失败</span>'}</div>
+      <div class="qr-block-info">
+        <span class="qr-label">${escapeHtml(label)}</span>
+        <span class="qr-url" title="${escapeHtml(url)}">${escapeHtml(url)}</span>
+        <div class="qr-block-actions">
+          <button type="button" class="btn" data-qr-open="${escapeHtml(url)}" title="新窗打开链接">
+            <i data-lucide="external-link"></i><span>打开</span>
+          </button>
+          <button type="button" class="btn" data-qr-copy="${escapeHtml(url)}" title="复制链接">
+            <i data-lucide="copy"></i><span>复制</span>
+          </button>
+        </div>
+      </div>
     </div>`;
 }
 

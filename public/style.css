@@ -1347,13 +1347,45 @@ select:hover {
 }
 
 .qr-block {
-  display: grid;
-  gap: 8px;
-  justify-items: center;
+  display: flex;
+  gap: 14px;
+  align-items: center;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
+}
+
+.qr-block-code {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.qr-block-code svg {
+  width: 96px;
+  height: 96px;
+  display: block;
+}
+
+.qr-error {
+  font-size: 10px;
+  color: #dc2626;
+  text-align: center;
+}
+
+.qr-block-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .qr-block .qr-label {
@@ -1362,17 +1394,29 @@ select:hover {
   font-weight: 600;
 }
 
-.qr-block svg {
-  width: 168px;
-  height: 168px;
-  border-radius: 6px;
-}
-
 .qr-url {
   font-size: 11.5px;
   font-family: var(--font-mono);
   word-break: break-all;
-  color: var(--muted);
+  color: #374151;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.qr-block-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.qr-block-actions .btn {
+  padding: 4px 10px;
+  font-size: 11.5px;
+}
   text-align: center;
 }
 

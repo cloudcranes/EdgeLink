@@ -414,11 +414,15 @@ function bindEvents() {
     }
   });
   document.getElementById('qr-modal-body').addEventListener('click', async (event) => {
-    const btn = event.target.closest('button[data-qr-copy]');
-    if (!btn) return;
-    const ok = await copyText(btn.dataset.qrCopy);
-    if (ok) showToast('链接已复制', 'ok');
-    else showToast('复制失败', 'err');
+    const copyBtn = event.target.closest('button[data-qr-copy]');
+    const openBtn = event.target.closest('button[data-qr-open]');
+    if (copyBtn) {
+      const ok = await copyText(copyBtn.dataset.qrCopy);
+      if (ok) showToast('链接已复制', 'ok');
+      else showToast('复制失败', 'err');
+    } else if (openBtn) {
+      window.open(openBtn.dataset.qrOpen, '_blank', 'noopener');
+    }
   });
   // DDNS 解析记录弹窗：关闭（按钮/遮罩）
   document.getElementById('ddns-record-modal').addEventListener('click', (event) => {
