@@ -496,6 +496,9 @@ export function openAppDetailModal(appId) {
           <button type="button" class="icon-btn" data-drawer-action="copy" data-domain="${escapeHtml(cdn || '')}" title="复制 cdn 域名" aria-label="复制 cdn 域名" ${cdn ? '' : 'disabled'}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
+          <button type="button" class="icon-btn" data-drawer-action="open" data-domain="${escapeHtml(cdn || '')}" title="打开 cdn（新窗）" aria-label="打开 cdn" ${cdn ? '' : 'disabled'}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          </button>
         </span>
       </dd>
       <dt>内网服务</dt><dd class="mono">${escapeHtml(app.target || '')}</dd>
