@@ -4009,7 +4009,7 @@ tbody tr {
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
-  z-index: 80;
+  z-index: 110;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease-out;
@@ -4030,7 +4030,7 @@ tbody tr {
   background: var(--surface-2);
   border-left: 1px solid var(--border);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
-  z-index: 81;
+  z-index: 111;
   display: flex;
   flex-direction: column;
   transform: translateX(100%) scale(0.98);
@@ -4250,6 +4250,10 @@ tbody tr {
   /* 异常 FAB：抬高到底部 nav 之上 */
   .exception-fab { right: 14px; bottom: calc(82px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px; font-size: 12px; }
   .exception-fab-count { min-width: 18px; height: 18px; font-size: 11px; }
+
+  /* 抽屉打开时：隐藏底部 nav + 异常 FAB（避免遮挡抽屉底部操作按钮） */
+  body.drawer-open .sidebar { transform: translateY(100%); visibility: hidden; transition: transform 0.25s ease-out, visibility 0s 0.25s; }
+  body.drawer-open .exception-fab { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 
   /* DDNS 状态行：横向信息保留但缩小 */
   .ddns-status-row { padding: 6px 10px; gap: 6px; font-size: 12px; }

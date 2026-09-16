@@ -17,6 +17,7 @@ export function openDrawer() {
   requestAnimationFrame(() => {
     drawer.classList.add('open');
     backdrop.classList.add('open');
+    document.body.classList.add('drawer-open');
   });
 }
 export function closeDrawer() {
@@ -25,6 +26,7 @@ export function closeDrawer() {
   if (!drawer || !backdrop) return;
   drawer.classList.remove('open');
   backdrop.classList.remove('open');
+  document.body.classList.remove('drawer-open');
   setTimeout(() => {
     drawer.hidden = true;
     backdrop.hidden = true;
