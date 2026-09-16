@@ -42,7 +42,7 @@ export async function refreshStatus() {
   if (button) {
     button.disabled = true;
     button.classList.add('is-loading');
-    icon.dataset.lucide = 'loader-circle';
+    if (icon) icon.dataset.lucide = 'loader-circle';
     refreshIcons();
   }
   try {

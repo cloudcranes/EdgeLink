@@ -715,6 +715,10 @@ window.__perfSetRange = (range) => {
   refreshPerf();
 };
 
+let perfBusy = false;
+// 性能图当前时间范围（默认 1h）
+let perfRangeMs = 60 * 60 * 1000;
+
 async function refreshPerf() {
   if (perfBusy) return;
   perfBusy = true;
