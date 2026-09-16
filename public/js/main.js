@@ -399,14 +399,35 @@ function bindEvents() {
         btn.innerHTML = `<i data-lucide="loader-circle"></i><span>修复 ${done}/${total}${current ? ` · ${current}` : ''}</span>`;
         window.lucide?.createIcons();
       };
-      setProgress(0, 0, '查询中…');
+      // 失败项隔离重试：dataset.failed 存 JSON [{appId,domain,error}]
+      const readFailed = () => {
+        try { return JSON.parse(btn.dataset.failed || '[]'); } catch { return []; }
+      };
+      const writeFailed = (list) => { btn.dataset.failed = JSON.stringify(list); };
+
+      // 重试模式：dataset.failed 非空 → 只跑这些（不重新查 diagnostics）
+      const retryList = readFailed();
+      const isRetry = retryList.length > 0;
+      const setRetryHtml = (failedList) => {
+        btn.dataset.failed = JSON.stringify(failedList);
+        btn.innerHTML = `<i data-lucide="rotate-cw"></i><span>重试 ${failedList.length} 项失败</span>`;
+        window.lucide?.createIcons();
+      };
+
+      setProgress(0, 0, isRetry ? '加载失败项…' : '查询中…');
       let fixed = 0;
       let targets = [];
+      let failedThisRun = [];
       try {
         const { fixEsaCname, fetchEsaCnameDiagnostics } = await import('./summary.js');
-        const items = await fetchEsaCnameDiagnostics();
-        targets = items.filter((i) => i.fixable);
+        if (isRetry) {
+          targets = retryList;
+        } else {
+          const items = await fetchEsaCnameDiagnostics();
+          targets = items.filter((i) => i.fixable);
+        }
         if (targets.length === 0) {
+          writeFailed([]);
           showToast('没有需要修复的项目', 'ok');
           await refreshSummary();
           return;
@@ -418,21 +439,30 @@ function bindEvents() {
             await fixEsaCname(item.appId);
             fixed++;
           } catch (error) {
+            failedThisRun.push({ appId: item.appId, domain: item.domain, error: error.message });
             appendLog('一键修复', 'error', `${item.domain} 修复失败：${error.message}`);
           }
         }
         appendLog('一键修复', 'ok', `已尝试修复 ${targets.length} 个，${fixed} 个成功`);
         showToast(`已修复 ${fixed}/${targets.length} 个 ESA CNAME`, 'ok');
+        writeFailed(failedThisRun);
       } finally {
-        // 等 refreshSummary 跑完再还原按钮（让 summary 决定 banner 是否隐藏 + 按钮新文案）
+        // 等 refreshSummary 跑完再决定按钮状态
         await refreshSummary();
-        // 若 summary 没改 banner（如还在 fixable），还原回原始一键修复按钮文案
-        if (!btn.hidden) {
+        if (btn.hidden) return; // banner 已 hidden（全部成功或 diagnostics 已清空）
+        const finalFailed = readFailed();
+        if (finalFailed.length > 0) {
+          // 还有失败项：切到「重试 N 项失败」模式（保持 fix-cname 触发同一 handler，但走重试分支）
           btn.disabled = false;
-          btn.innerHTML = originalHtml;
-          window.lucide?.createIcons();
+          setRetryHtml(finalFailed);
+          btn.title = finalFailed.map((f) => `${f.domain}: ${f.error}`).join('\n');
+          return;
         }
-        // 若 banner 已 hidden，summary 已把按钮 hidden=true，无需还原
+        // 没失败项但还在 fixable：还原回原始一键修复
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        btn.title = '';
+        window.lucide?.createIcons();
       }
       return;
     }
