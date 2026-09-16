@@ -69,6 +69,7 @@ export const api = {
     request('/api/deploy', { method: 'POST', body: JSON.stringify({ config, appId, parts }) }),
   loadSites: (config) => request('/api/esa/sites', { method: 'POST', body: JSON.stringify({ config }) }),
   testLucky: (config) => request('/api/lucky/test', { method: 'POST', body: JSON.stringify({ config }) }),
+  fetchStatus: () => request('/api/status'),
   fetchLuckyRules: () => request('/api/lucky/rules'),
   fetchLuckyDdns: () => request('/api/lucky/ddns/tasks'),
   recordDeleteDdns: (recordKey, opts = {}) => {

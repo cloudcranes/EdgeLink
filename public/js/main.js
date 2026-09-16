@@ -2,6 +2,7 @@ import { api, getToken } from './api.js';
 import { addOrUpdateApp, closeAppDetailModal, closeDrawer, closeQrModal, deleteApp, deployApps, editApp, openAppDetailModal, openDrawer, renderApps, runAppHealth, showQrModal } from './apps.js';
 import { renderPerfLineChart } from './charts.js';
 import { fillFormFromConfig, gatherConfig, loadConfig, renderSiteSelect, saveConfig, state } from './state.js';
+import { refreshStatus } from './status.js';
 import { appendLog, clearLogs, confirmDialog, copyText, openDomain, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
 import { importLuckyRule, enableEsaForRule, enableAllEsa, editEsaRecord, deleteEsaRecord, loadExistingRules, renderExistingRules } from './existing.js';
 import { refreshQuickStart } from './quickstart.js';
@@ -250,6 +251,7 @@ function bindEvents() {
   document.getElementById('lucky-test').addEventListener('click', testLucky);
   document.getElementById('esa-load-sites').addEventListener('click', loadSites);
   document.getElementById('clear-logs').addEventListener('click', clearLogs);
+  document.getElementById('refresh-status')?.addEventListener('click', refreshStatus);
   document.getElementById('esa-site-select').addEventListener('change', (event) => {
     document.getElementById('esa-site-id').value = event.target.value;
   });
@@ -601,6 +603,7 @@ async function mainInit() {
   loadExistingRules();
   refreshIcons();
   refreshSnapshots();
+  refreshStatus();
   startAutoRefresh();
   fetchLogHistory();
   startLogStream();
@@ -697,6 +700,7 @@ function startAutoRefresh() {
     if (route === 'overview') {
       refreshSummary();
       refreshDdns();
+      refreshStatus();
       refreshPerf();
     }
   };
