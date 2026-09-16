@@ -172,7 +172,12 @@ export async function refreshDdns() {
     container.innerHTML = tasks.map(renderTaskCard).join('');
     window.lucide?.createIcons();
   } catch (error) {
-    container.innerHTML = `<div class="empty-state"><i data-lucide="alert-circle"></i><span>DDNS 任务加载失败：${escapeHtml(error.message)}</span></div>`;
+    const isNet = /fetch failed|网络错误|请求超时|abort/i.test(error.message);
+    const icon = isNet ? 'wifi-off' : 'alert-circle';
+    const hint = isNet
+      ? '（网络层失败：检查面板服务是否在运行、Lucky 是否可访问）'
+      : '';
+    container.innerHTML = `<div class="empty-state"><i data-lucide="${icon}"></i><span>DDNS 任务加载失败：${escapeHtml(error.message)}${hint}</span><button class="btn btn-ghost" type="button" data-ddns-retry style="margin-top:10px"><i data-lucide="refresh-cw"></i><span>重试</span></button></div>`;
     window.lucide?.createIcons();
   }
 }
@@ -183,8 +188,9 @@ export function bindDdnsDeleteHandler() {
   if (!container || container._deleteBound) return;
   container._deleteBound = true;
   container.addEventListener('click', (event) => {
-    const btn = event.target.closest('button[data-ddns-record-delete]');
-    if (!btn) return;
-    handleDdnsRecordDelete(btn);
+    const delBtn = event.target.closest('button[data-ddns-record-delete]');
+    if (delBtn) return handleDdnsRecordDelete(delBtn);
+    const retryBtn = event.target.closest('button[data-ddns-retry]');
+    if (retryBtn) return refreshDdns();
   });
 }
