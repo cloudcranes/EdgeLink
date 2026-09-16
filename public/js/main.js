@@ -3,7 +3,7 @@ import { addOrUpdateApp, closeAppDetailModal, closeDrawer, closeQrModal, deleteA
 import { renderPerfLineChart } from './charts.js';
 import { fillFormFromConfig, gatherConfig, loadConfig, renderSiteSelect, saveConfig, state } from './state.js';
 import { refreshStatus } from './status.js';
-import { appendLog, clearLogs, confirmDialog, copyText, escapeHtml, openDomain, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
+import { appendLog, clearLogs, confirmDialog, copyText, openDomain, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
 import { importLuckyRule, enableEsaForRule, enableAllEsa, editEsaRecord, deleteEsaRecord, loadExistingRules, renderExistingRules } from './existing.js';
 import { refreshQuickStart } from './quickstart.js';
 import { refreshSummary } from './summary.js';
@@ -376,7 +376,6 @@ function bindEvents() {
     if (event.key === 'Escape') {
       closeDrawer();
       closeQrModal();
-      closeDdnsRecordModal();
     }
   });
   // 异常悬浮按钮 → 切换到应用 tab 并打开第一个异常 app 的抽屉
@@ -440,12 +439,7 @@ function bindEvents() {
       window.open(openBtn.dataset.qrOpen, '_blank', 'noopener');
     }
   });
-  // DDNS 解析记录弹窗：关闭（按钮/遮罩）
-  document.getElementById('ddns-record-modal').addEventListener('click', (event) => {
-    if (event.target.id === 'ddns-record-modal' || event.target.closest('[data-close-ddns-record]')) {
-      closeDdnsRecordModal();
-    }
-  });
+  // DDNS 解析记录弹窗已移除
   document.getElementById('existing-rules-body').addEventListener('change', async (event) => {
     const input = event.target.closest('input[data-ex-switch]');
     if (!input) return;
@@ -614,7 +608,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   fetchLogHistory();
   startLogStream();
   refreshPerf();
-  refreshDdnsStatus();
 });
 
 // 状态自动刷新：概览页可见时每 60s 刷新摘要/DDNS/状态，页面隐藏时暂停
@@ -704,7 +697,6 @@ function startAutoRefresh() {
       refreshDdns();
       refreshStatus();
       refreshPerf();
-      refreshDdnsStatus();
     }
   };
   autoRefreshTimer = window.setInterval(tick, 60000);
@@ -715,129 +707,7 @@ function startAutoRefresh() {
   });
 }
 
-/* ---------- Lucky DDNS 状态（只读诊断：Lucky 任务 vs 公网权威记录） ---------- */
-
-let ddnsStatusBusy = false;
-
-async function refreshDdnsStatus() {
-  if (ddnsStatusBusy) return;
-  ddnsStatusBusy = true;
-  const list = document.getElementById('ddns-status-list');
-  const summary = document.getElementById('ddns-status-summary');
-  // 首次加载（还没有数据）才显示"查询中"；后续自动刷新保留旧数据不闪烁
-  const hasData = list && list.dataset.loaded === 'true';
-  if (list && !hasData) {
-    list.innerHTML = '<div class="empty-state"><i data-lucide="loader-circle"></i><span>查询中…</span></div>';
-    refreshIcons();
-  }
-  if (summary) summary.textContent = '更新中…';
-  try {
-    const data = await api.fetchDdnsStatus();
-    renderDdnsStatus(data);
-    if (list) list.dataset.loaded = 'true';
-    if (summary) {
-      const total = (data.items || []).length;
-      const ok = (data.items || []).filter((i) => i.status === 'ok').length;
-      const pending = (data.items || []).filter((i) => i.status === 'pending').length;
-      const wild = (data.items || []).filter((i) => i.status === 'wildcard').length;
-      const parts = [];
-      if (total) parts.push(`共 ${total}`);
-      if (ok) parts.push(`已解析 ${ok}`);
-      if (pending) parts.push(`待解析 ${pending}`);
-      if (wild) parts.push(`通配 ${wild}`);
-      summary.textContent = parts.length ? parts.join(' · ') : (data.message || 'Lucky 中暂无 nas 子域任务');
-    }
-  } catch (error) {
-    if (list) {
-      // 错误时如果已有数据，保留旧数据，仅在 summary 提示失败
-      if (!hasData) {
-        list.innerHTML = `<div class="audit-item error"><i data-lucide="x-circle"></i><span>${escapeHtml(error.message)}</span></div>`;
-        refreshIcons();
-      }
-    }
-    if (summary) summary.textContent = hasData ? `${summary.textContent}（更新失败）` : '查询失败';
-  } finally {
-    ddnsStatusBusy = false;
-  }
-}
-
-function renderDdnsStatus(data) {
-  const list = document.getElementById('ddns-status-list');
-  if (!list) return;
-  const items = data.items || [];
-  if (items.length === 0) {
-    list.innerHTML = '<div class="empty-state"><i data-lucide="info"></i><span>Lucky 中尚未发现 nas 子域 DDNS 任务（先在 Lucky 后台添加）</span></div>';
-    return;
-  }
-  // 紧凑行：域名（mono）+ 类型徽章 + 状态徽章；点击行弹窗显示完整信息
-  list.innerHTML = items
-    .map((it, idx) => {
-      const enabled = (it.tasks || []).every((t) => t.enable);
-      const enableBadge = enabled ? '<span class="ddns-badge on">启用</span>' : '<span class="ddns-badge off">停用</span>';
-      const statusMap = { ok: '<span class="ddns-badge on">已解析</span>', pending: '<span class="ddns-badge warn">待解析</span>', wildcard: '<span class="ddns-badge info">通配</span>' };
-      const status = statusMap[it.status] || it.status;
-      const typeBadge = `<span class="ddns-badge">${escapeHtml(it.type || 'A')}</span>`;
-      // 整个 dataset 存到 row 的 data-idx，弹窗按 idx 查找
-      return `
-        <div class="ddns-status-row" data-ddns-record-idx="${idx}" role="button" tabindex="0" title="点击查看完整信息">
-          <span class="ddns-domain mono" data-label="域名">${escapeHtml(it.fullDomain)}</span>
-          <span class="ddns-type-badge">${typeBadge}</span>
-          <span class="ddns-state">${status}</span>
-          <span class="ddns-state-icon"><i data-lucide="chevron-right"></i></span>
-        </div>`;
-    })
-    .join('');
-  // 在 list 上委托点击/键盘事件，避免每行单独绑定
-  list.onclick = (e) => {
-    const row = e.target.closest('[data-ddns-record-idx]');
-    if (row) openDdnsRecordModal(items[Number(row.dataset.ddnsRecordIdx)]);
-  };
-  list.onkeydown = (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const row = e.target.closest('[data-ddns-record-idx]');
-    if (row) {
-      e.preventDefault();
-      openDdnsRecordModal(items[Number(row.dataset.ddnsRecordIdx)]);
-    }
-  };
-  refreshIcons();
-}
-
-function openDdnsRecordModal(item) {
-  const modal = document.getElementById('ddns-record-modal');
-  if (!modal || !item) return;
-  document.getElementById('ddns-record-modal-title').textContent = item.fullDomain || '解析记录详情';
-  const taskNames = (item.tasks || []).map((t) => `${t.name}${t.enable ? '' : '（停用）'}`).join('、') || '—';
-  const enabled = (item.tasks || []).every((t) => t.enable);
-  const statusMap = { ok: '已解析', pending: '待解析', wildcard: '通配' };
-  const aaaa = item.hasAAAA ? '✓ 存在' : '✗ 缺失';
-  const a = item.hasA ? '✓ 存在' : '✗ 缺失';
-  const body = document.getElementById('ddns-record-modal-body');
-  body.innerHTML = `
-    <dl class="kv">
-      <dt>完整域名</dt><dd class="mono">${escapeHtml(item.fullDomain || '')}</dd>
-      <dt>记录类型</dt><dd>${escapeHtml(item.type || 'A')}</dd>
-      <dt>所属 DDNS 任务</dt><dd>${escapeHtml(taskNames)}</dd>
-      <dt>任务状态</dt><dd>${enabled ? '<span class="ddns-badge on">启用</span>' : '<span class="ddns-badge off">停用</span>'}</dd>
-      <dt>A 记录</dt><dd>${a}</dd>
-      <dt>AAAA 记录</dt><dd>${aaaa}</dd>
-      <dt>解析状态</dt><dd>${escapeHtml(statusMap[item.status] || item.status || '未知')}</dd>
-    </dl>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-ghost" data-close-ddns-record>关闭</button>
-    </div>
-  `;
-  modal.classList.remove('hidden');
-  refreshIcons();
-}
-
-function closeDdnsRecordModal() {
-  document.getElementById('ddns-record-modal')?.classList.add('hidden');
-}
-
-let perfBusy = false;
-// 性能图当前时间范围（默认 1h）
-let perfRangeMs = 60 * 60 * 1000;
+/* ---------- 性能图：60s 自动刷新（首页纯展示，无手动按钮） ---------- */
 // 把切换器暴露成全局：charts.js 改完后 main.js 仍可触发局部重渲染
 window.__perfSetRange = (range) => {
   const map = { '1h': 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };

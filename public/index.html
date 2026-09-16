@@ -178,18 +178,12 @@
           <details class="ddns-panel" open>
             <summary class="panel-head">
               <h2><i data-lucide="radio"></i>Lucky DDNS 管理</h2>
-              <span class="count" id="ddns-status-summary">未刷新</span>
             </summary>
 
             <details class="ddns-sub">
               <summary class="ddns-sub-head"><i data-lucide="layers"></i>任务与记录（点击展开）</summary>
               <div id="ddns-tasks" class="ddns-tasks"></div>
             </details>
-
-            <div class="ddns-sub">
-              <h3 class="ddns-sub-head"><i data-lucide="list-checks"></i>公网解析状态（nas 子域）</h3>
-              <div id="ddns-status-list" class="ddns-status-list"></div>
-            </div>
           </details>
         </section>
 
@@ -516,19 +510,6 @@
           </button>
         </div>
         <div class="modal-body" id="esa-modal-body"></div>
-      </div>
-    </div>
-
-    <!-- DDNS 公网解析记录详情弹窗 -->
-    <div id="ddns-record-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="解析记录详情">
-      <div class="modal-card">
-        <div class="modal-head">
-          <h3><i data-lucide="globe"></i><span id="ddns-record-modal-title">解析记录详情</span></h3>
-          <button type="button" class="btn btn-ghost icon-only" data-close-ddns-record aria-label="关闭">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <div class="modal-body" id="ddns-record-modal-body"></div>
       </div>
     </div>
 

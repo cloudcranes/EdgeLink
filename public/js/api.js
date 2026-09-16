@@ -126,7 +126,6 @@ export const api = {
   },
   portPrecheck: () => request('/api/precheck/ports'),
   fetchLogs: () => request('/api/logs'),
-  fetchDdnsStatus: () => request('/api/lucky/ddns/pending'),
   toggleLuckyProxy: (proxyKey, field, value) =>
     request('/api/lucky/proxy/toggle', { method: 'POST', body: JSON.stringify({ proxyKey, field, value }) }),
   toggleEsaDomain: (domain, value) =>
