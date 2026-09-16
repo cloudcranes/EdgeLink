@@ -1416,6 +1416,7 @@ select:hover {
 .qr-block-actions .btn {
   padding: 4px 10px;
   font-size: 11.5px;
+  min-height: 28px;
 }
   text-align: center;
 }
@@ -4374,6 +4375,12 @@ tbody tr {
   /* 弹窗 */
   .modal-card { max-width: calc(100vw - 16px); margin: 8px; }
   .modal-head, .modal-body, .modal-actions { padding-left: 16px; padding-right: 16px; }
+
+  /* QR 弹窗：覆盖全局 .btn min-height，弹窗内无需 40-44px 触控高度 */
+  .qr-block-actions .btn { min-height: 30px; padding: 4px 8px; font-size: 11px; }
+  .qr-block { padding: 12px; gap: 12px; }
+  .qr-block-code { width: 80px; height: 80px; }
+  .qr-block-code svg { width: 80px; height: 80px; }
 }
 
 /* ≤480px：超大数字进一步缩小、卡片间距紧凑 */
