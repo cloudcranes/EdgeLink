@@ -2408,9 +2408,19 @@ details.ddns-sub > summary.ddns-sub-head:hover {
     justify-content: center;
     gap: 3px;
     min-height: 48px;
+    min-width: 0;
     padding: 4px 2px;
     font-size: 11px;
     border-radius: 10px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .sidebar .nav-item > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
   }
 
   .sidebar .nav-item svg {
@@ -4113,7 +4123,7 @@ tbody tr {
   position: fixed;
   right: 28px;
   bottom: 28px;
-  z-index: 70;
+  z-index: 110; /* 高于 .sidebar 底部 nav (z=100) */
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -4179,4 +4189,124 @@ tbody tr {
 @keyframes skeletonShimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ====================================================================== */
+/* ============ 移动端适配（v2/v3 新元素：仪表盘 + 卡片 + 抽屉 + FAB） ============ */
+/* ====================================================================== */
+
+/* ≤720px：pad 紧凑、顶栏状态条只留圆点、警告条/抽屉/FAB 适配、DDNS 紧凑 */
+@media (max-width: 720px) {
+  .page { padding: 16px 14px 96px; max-width: 100%; }
+  .page-head { margin-bottom: 18px; }
+  .page-head h2 { font-size: 18px; }
+  .page-head p { font-size: 11.5px; word-break: break-all; }
+
+  /* 顶栏：进一步压紧，状态条只保留圆点 */
+  .topbar { gap: 4px; }
+  .topbar-brand .sidebar-brand-text { display: none; }
+  .topbar-actions { gap: 4px; }
+  .topbar-actions .status-strip { gap: 2px; }
+  .topbar-actions .status-strip .status-item { padding: 4px; }
+  .topbar-actions .status-strip .status-label { display: none; }
+  .topbar-actions .status-strip .status-value { display: none; }
+  .topbar-actions .status-strip .status-dot { width: 6px; height: 6px; }
+
+  /* 健康度仪表盘：单列堆叠，间距紧凑 */
+  .health-dashboard { grid-template-columns: 1fr; gap: 18px; padding: 20px 18px; }
+  .health-dashboard-main { border-right: 0; border-bottom: 1px solid var(--border); padding: 0 0 18px; }
+  .health-dashboard-big { font-size: 52px; }
+  .health-dashboard-big .percent { font-size: 22px; line-height: 1.8; }
+  .health-dashboard-metrics { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .health-metric { padding: 10px 12px; gap: 10px; }
+  .health-metric-icon { width: 28px; height: 28px; }
+  .health-metric-value { font-size: 17px; }
+  .health-metric-label { font-size: 10.5px; }
+
+  /* 待处理警告条 */
+  .pending-banner { padding: 10px 14px; font-size: 12px; flex-wrap: wrap; }
+  .pending-banner-text { flex: 1 1 100%; }
+  .pending-banner-action { flex-shrink: 0; }
+
+  /* 性能图块 */
+  .perf-block { padding: 18px 16px; }
+  .perf-block-head { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .perf-block-range { align-self: flex-end; }
+  .perf-line-row { grid-template-columns: 80px 1fr 56px; gap: 8px; font-size: 11px; }
+
+  /* 应用管理 */
+  .apps-panel .app-filter { flex-direction: column; align-items: stretch; }
+  .apps-panel .app-filter input, .apps-panel .app-filter select { width: 100%; }
+  .app-form { padding: 12px; gap: 10px; }
+  .app-fields { grid-template-columns: 1fr; }
+  .app-form-switches { flex-wrap: wrap; }
+  .app-form-switches .toggle { font-size: 12px; }
+  .app-card { padding: 16px 16px 14px; gap: 10px; }
+  .app-card-name { font-size: 16px; }
+  .app-card-domain { font-size: 11.5px; }
+  .app-card-foot { padding-top: 6px; }
+  .app-card-retest, .app-card-menu { font-size: 10.5px; padding: 6px 10px; }
+
+  /* 异常 FAB：抬高到底部 nav 之上 */
+  .exception-fab { right: 14px; bottom: calc(82px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px; font-size: 12px; }
+  .exception-fab-count { min-width: 18px; height: 18px; font-size: 11px; }
+
+  /* DDNS 状态行：横向信息保留但缩小 */
+  .ddns-status-row { padding: 6px 10px; gap: 6px; font-size: 12px; }
+  .ddns-status-row .ddns-domain { font-size: 11.5px; }
+  .ddns-records { font-size: 11.5px; }
+  .ddns-records th, .ddns-records td { padding: 5px 8px; }
+  .ddns-records th { font-size: 10.5px; }
+  .ddns-action-th { width: 40px; }
+  .ddns-action .btn { padding: 3px 5px; min-height: 24px; }
+
+  /* 现有规则卡：紧凑 */
+  .existing-tools { flex-wrap: wrap; gap: 6px; }
+  .existing-tools .segmented { flex: 1 1 auto; }
+  .existing-tools .btn { padding: 4px 10px; font-size: 12px; }
+
+  /* 设置卡：单列 */
+  .settings-grid { grid-template-columns: 1fr; gap: 14px; }
+  .settings-card { padding: 14px; }
+  .settings-save { flex-direction: column; gap: 10px; align-items: stretch; }
+
+  /* 弹窗 */
+  .modal-card { max-width: calc(100vw - 16px); margin: 8px; }
+  .modal-head, .modal-body, .modal-actions { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ≤480px：超大数字进一步缩小、卡片间距紧凑 */
+@media (max-width: 480px) {
+  .page { padding: 12px 10px 96px; }
+  .health-dashboard { padding: 16px 14px; gap: 14px; }
+  .health-dashboard-big { font-size: 42px; }
+  .health-dashboard-big .percent { font-size: 18px; }
+  .health-dashboard-metrics { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .health-metric { padding: 8px 10px; }
+  .health-metric-icon { width: 24px; height: 24px; }
+  .health-metric-value { font-size: 15px; }
+  .health-metric-label { font-size: 10px; }
+  .app-card { padding: 14px; }
+  .app-card-name { font-size: 15px; }
+  .app-card-domain { font-size: 11px; }
+  .exception-fab { padding: 8px 12px; font-size: 11.5px; }
+  .perf-line-row { grid-template-columns: 72px 1fr 50px; }
+  /* 抽屉：标题/操作区更紧凑 */
+  .drawer-head { padding: 14px 16px; }
+  .drawer-body { padding: 16px; }
+  .drawer-foot { padding: 12px 16px; }
+  .drawer-title { font-size: 15px; }
+  .kv { grid-template-columns: 1fr; gap: 2px 0; }
+  .kv dt { padding-top: 8px; }
+  .kv dd { padding-bottom: 4px; }
+  /* DDNS 状态行：在 ≤480 改为堆叠（domain/type/badge 换行） */
+  .ddns-status-row { flex-wrap: wrap; }
+  .ddns-status-row .ddns-domain { flex: 1 1 100%; }
+}
+
+/* ≤360px：超窄屏最后保障（防止任何 iPhone SE 一代 320px 滚动条） */
+@media (max-width: 360px) {
+  .health-dashboard-big { font-size: 36px; }
+  .app-card-foot { flex-direction: column; align-items: stretch; gap: 6px; }
+  .app-card-foot .app-card-retest, .app-card-foot .app-card-menu { width: 100%; justify-content: center; }
 }
