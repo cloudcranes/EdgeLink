@@ -553,10 +553,10 @@ export function openExistingLuckyModal(key) {
   const accelDomain = siteRoot ? `${domain.split('.')[0]}.cdn.${siteRoot}` : '';
   const enabled = !!accelDomain && (new Set(esaDomains.map((d) => d.name)).has(accelDomain) || (domain && new Set(esaDomains.map((d) => d.value)).has(domain)));
   const target = (rule.locations[0] || '').replace(/^https?:\/\//, '');
-  $('drawer-title-text').textContent = rule.name || domain || 'Lucky 子规则详情';
+  el('drawer-title-text').textContent = rule.name || domain || 'Lucky 子规则详情';
   const titleIcon = document.querySelector('#drawer-title svg');
   if (titleIcon) titleIcon.setAttribute('data-lucide', 'database');
-  $('drawer-body').innerHTML = `
+  el('drawer-body').innerHTML = `
     <dl class="kv">
       <dt>状态</dt><dd><span class="pill ${rule.enabled ? 'on' : 'off'}">${rule.enabled ? '启用' : '停用'}</span></dd>
       <dt>域名</dt><dd class="mono">${escapeHtml(domain || '—')}</dd>
@@ -567,7 +567,7 @@ export function openExistingLuckyModal(key) {
       <dt>面板管理</dt><dd>${rule.managed ? '<span class="pill on">是</span>' : '<span class="pill off">否（手动）</span>'}</dd>
     </dl>
   `;
-  $('drawer-foot').innerHTML = `
+  el('drawer-foot').innerHTML = `
     <button type="button" class="btn" data-existing-detail-action="copy" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" ${enabled ? '' : `data-port="${escapeHtml(rule.listenPort || '')}"`} title="复制域名">
       <i data-lucide="copy"></i><span>复制域名</span>
     </button>
@@ -592,10 +592,10 @@ export function closeExistingLuckyModal() {
 export function openExistingEsaModal(recordId) {
   const domain = findEsaDomainById(recordId);
   if (!domain) return;
-  $('drawer-title-text').textContent = domain.name || 'ESA 加速域名详情';
+  el('drawer-title-text').textContent = domain.name || 'ESA 加速域名详情';
   const titleIcon = document.querySelector('#drawer-title svg');
   if (titleIcon) titleIcon.setAttribute('data-lucide', 'globe');
-  $('drawer-body').innerHTML = `
+  el('drawer-body').innerHTML = `
     <dl class="kv">
       <dt>域名</dt><dd class="mono">${escapeHtml(domain.name || '—')}</dd>
       <dt>类型</dt><dd class="mono">${escapeHtml(domain.type || '—')}</dd>
@@ -605,7 +605,7 @@ export function openExistingEsaModal(recordId) {
       <dt>recordId</dt><dd class="mono">${escapeHtml(String(domain.id || '—'))}</dd>
     </dl>
   `;
-  $('drawer-foot').innerHTML = `
+  el('drawer-foot').innerHTML = `
     <button type="button" class="btn" data-existing-esa-detail-action="edit" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="编辑 ESA 记录">
       <i data-lucide="edit-3"></i><span>编辑</span>
     </button>
