@@ -1,6 +1,6 @@
 import { api, getToken } from './api.js';
 import { addOrUpdateApp, closeAppDetailModal, closeDrawer, closeQrModal, deleteApp, deployApps, editApp, openAppDetailModal, openDrawer, renderApps, runAppHealth, showQrModal } from './apps.js';
-import { renderLatencyBars, renderSparklines } from './charts.js';
+import { renderPerfLineChart } from './charts.js';
 import { fillFormFromConfig, gatherConfig, loadConfig, renderSiteSelect, saveConfig, state } from './state.js';
 import { refreshStatus } from './status.js';
 import { appendLog, clearLogs, confirmDialog, copyText, openDomain, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
@@ -480,53 +480,45 @@ function bindEvents() {
       openDomain(button.dataset.domain, button.dataset.port);
     }
   });
-  // 现存规则 Lucky 详情弹窗：内嵌动作按钮
-  document.getElementById('existing-lucky-modal-body').addEventListener('click', async (event) => {
-    const btn = event.target.closest('button[data-existing-detail-action]');
-    if (!btn) return;
-    const action = btn.dataset.existingDetailAction;
-    if (action === 'copy' && btn.dataset.domain) {
-      const ok = await copyText(btn.dataset.domain);
-      if (ok) showToast(`已复制 ${btn.dataset.domain}`, 'ok');
-      else showToast('复制失败', 'err');
-    } else if (action === 'open' && btn.dataset.domain) {
-      openDomain(btn.dataset.domain, btn.dataset.port);
-    } else if (action === 'import') {
-      closeExistingLuckyModal();
-      importLuckyRule(btn.dataset.key);
-    } else if (action === 'enable-esa') {
-      closeExistingLuckyModal();
-      enableEsaForRule(btn.dataset.accel, btn.dataset.target);
+  // 现存规则抽屉内嵌动作按钮：委托到 #drawer-foot（因为现有规则的按钮与 app 详情共用同一 drawer）
+  document.getElementById('drawer-foot').addEventListener('click', async (event) => {
+    const existingBtn = event.target.closest('button[data-existing-detail-action], button[data-existing-esa-detail-action]');
+    if (!existingBtn) return; // 让非现有规则的按钮（data-drawer-action）由 app-cards 监听器处理
+    if (existingBtn.dataset.existingDetailAction) {
+      const action = existingBtn.dataset.existingDetailAction;
+      if (action === 'copy' && existingBtn.dataset.domain) {
+        const ok = await copyText(existingBtn.dataset.domain);
+        if (ok) showToast(`已复制 ${existingBtn.dataset.domain}`, 'ok');
+        else showToast('复制失败', 'err');
+      } else if (action === 'open' && existingBtn.dataset.domain) {
+        // 弹新窗（与 app 详情一致）
+        const port = existingBtn.dataset.port || '';
+        const url = port ? `https://${existingBtn.dataset.domain}:${port}` : `https://${existingBtn.dataset.domain}`;
+        window.open(url, '_blank', 'noopener');
+      } else if (action === 'import') {
+        closeDrawer();
+        importLuckyRule(existingBtn.dataset.key);
+      } else if (action === 'enable-esa') {
+        closeDrawer();
+        enableEsaForRule(existingBtn.dataset.accel, existingBtn.dataset.target);
+      }
+      return;
     }
-  });
-  // 现存规则 ESA 详情弹窗：内嵌动作按钮
-  document.getElementById('existing-esa-modal-body').addEventListener('click', async (event) => {
-    const btn = event.target.closest('button[data-existing-esa-detail-action]');
-    if (!btn) return;
-    const action = btn.dataset.existingEsaDetailAction;
-    if (action === 'copy' && btn.dataset.domain) {
-      const ok = await copyText(btn.dataset.domain);
-      if (ok) showToast(`已复制 ${btn.dataset.domain}`, 'ok');
-      else showToast('复制失败', 'err');
-    } else if (action === 'open' && btn.dataset.domain) {
-      openDomain(btn.dataset.domain);
-    } else if (action === 'edit') {
-      closeExistingEsaModal();
-      editEsaRecord(btn.dataset.recordId, btn.dataset.domain);
-    } else if (action === 'delete') {
-      closeExistingEsaModal();
-      deleteEsaRecord(btn.dataset.recordId, btn.dataset.domain);
-    }
-  });
-  // 弹窗关闭（背景/按钮/Esc）
-  document.getElementById('existing-lucky-modal').addEventListener('click', (event) => {
-    if (event.target.id === 'existing-lucky-modal' || event.target.closest('[data-close-existing-lucky]')) {
-      closeExistingLuckyModal();
-    }
-  });
-  document.getElementById('existing-esa-modal').addEventListener('click', (event) => {
-    if (event.target.id === 'existing-esa-modal' || event.target.closest('[data-close-existing-esa]')) {
-      closeExistingEsaModal();
+    if (existingBtn.dataset.existingEsaDetailAction) {
+      const action = existingBtn.dataset.existingEsaDetailAction;
+      if (action === 'copy' && existingBtn.dataset.domain) {
+        const ok = await copyText(existingBtn.dataset.domain);
+        if (ok) showToast(`已复制 ${existingBtn.dataset.domain}`, 'ok');
+        else showToast('复制失败', 'err');
+      } else if (action === 'open' && existingBtn.dataset.domain) {
+        window.open(`https://${existingBtn.dataset.domain}`, '_blank', 'noopener');
+      } else if (action === 'edit') {
+        closeDrawer();
+        editEsaRecord(existingBtn.dataset.recordId, existingBtn.dataset.domain);
+      } else if (action === 'delete') {
+        closeDrawer();
+        deleteEsaRecord(existingBtn.dataset.recordId, existingBtn.dataset.domain);
+      }
     }
   });
   document.addEventListener('keydown', (event) => {
@@ -824,6 +816,14 @@ function closeDdnsRecordModal() {
 }
 
 let perfBusy = false;
+// 性能图当前时间范围（默认 1h）
+let perfRangeMs = 60 * 60 * 1000;
+// 把切换器暴露成全局：charts.js 改完后 main.js 仍可触发局部重渲染
+window.__perfSetRange = (range) => {
+  const map = { '1h': 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
+  perfRangeMs = map[range] || perfRangeMs;
+  refreshPerf();
+};
 
 async function refreshPerf() {
   if (perfBusy) return;
@@ -835,7 +835,6 @@ async function refreshPerf() {
         .then((r) => r.json())
         .catch(() => ({ series: {} })),
     ]);
-    renderLatencyBars(document.getElementById('perf-bars'), health.results || []);
     // 延迟历史只显示活跃应用的 cdn 折线（nas 不再探测，遗留 :nas 序列一律忽略）
     const activeIds = new Set();
     for (const r of health.results || []) {
@@ -844,18 +843,21 @@ async function refreshPerf() {
         activeIds.add(r.id);
       }
     }
+    // 时间范围过滤 + 应用过滤
+    const cutoff = Date.now() - perfRangeMs;
     const filteredSeries = {};
     for (const [key, points] of Object.entries(history.series || {})) {
       if (!key.endsWith(':cdn')) continue; // nas.* 序列不再展示
       const appId = key.slice(0, key.lastIndexOf(':'));
-      if (activeIds.has(appId)) filteredSeries[key] = points;
+      if (!activeIds.has(appId)) continue;
+      const recentPoints = (points || []).filter((p) => !p.t || p.t >= cutoff);
+      if (recentPoints.length > 0) filteredSeries[key] = recentPoints;
     }
     const meta = {};
     for (const r of health.results || []) {
       meta[r.id] = { name: r.name };
     }
-    renderSparklines(document.getElementById('perf-spark'), filteredSeries, meta);
-    refreshIcons();
+    renderPerfLineChart(document.getElementById('perf-line-chart'), filteredSeries, meta);
   } finally {
     perfBusy = false;
   }

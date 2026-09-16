@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { closeDrawer, openDrawer } from './apps.js';
 import { fillFormFromConfig, getRootDomain, nasDomainFor, saveConfig, setConfig, state } from './state.js';
 import { appendLog, confirmDialog, escapeHtml, refreshIcons, showToast } from './ui.js';
 
@@ -551,9 +552,11 @@ export function openExistingLuckyModal(key) {
   const domain = rule.domains[0] || '';
   const accelDomain = siteRoot ? `${domain.split('.')[0]}.cdn.${siteRoot}` : '';
   const enabled = !!accelDomain && (new Set(esaDomains.map((d) => d.name)).has(accelDomain) || (domain && new Set(esaDomains.map((d) => d.value)).has(domain)));
-  el('existing-lucky-modal-title').textContent = rule.name || domain || 'Lucky 子规则详情';
   const target = (rule.locations[0] || '').replace(/^https?:\/\//, '');
-  el('existing-lucky-modal-body').innerHTML = `
+  $('drawer-title-text').textContent = rule.name || domain || 'Lucky 子规则详情';
+  const titleIcon = document.querySelector('#drawer-title svg');
+  if (titleIcon) titleIcon.setAttribute('data-lucide', 'database');
+  $('drawer-body').innerHTML = `
     <dl class="kv">
       <dt>状态</dt><dd><span class="pill ${rule.enabled ? 'on' : 'off'}">${rule.enabled ? '启用' : '停用'}</span></dd>
       <dt>域名</dt><dd class="mono">${escapeHtml(domain || '—')}</dd>
@@ -563,34 +566,36 @@ export function openExistingLuckyModal(key) {
       <dt>加速域名</dt><dd class="mono">${escapeHtml(accelDomain || '—')}${enabled ? ' <span class="pill on">已开通</span>' : ''}</dd>
       <dt>面板管理</dt><dd>${rule.managed ? '<span class="pill on">是</span>' : '<span class="pill off">否（手动）</span>'}</dd>
     </dl>
-    <div class="modal-actions">
-      <button type="button" class="btn" data-existing-detail-action="copy" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" ${enabled ? '' : `data-port="${escapeHtml(rule.listenPort || '')}"`} title="复制域名">
-        <i data-lucide="copy"></i><span>复制域名</span>
-      </button>
-      <button type="button" class="btn" data-existing-detail-action="open" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" data-port="${enabled ? '' : escapeHtml(rule.listenPort || '')}" title="打开域名">
-        <i data-lucide="external-link"></i><span>打开</span>
-      </button>
-      <button type="button" class="btn" data-existing-detail-action="import" data-key="${escapeHtml(rule.key)}" ${rule.managed ? '' : 'disabled'} title="${rule.managed ? '导入为面板应用' : '手动规则不支持导入'}">
-        <i data-lucide="download"></i><span>${rule.managed ? '导入为面板应用' : '手动规则'}</span>
-      </button>
-      <button type="button" class="btn ${enabled ? 'btn-done' : 'btn-secondary'}" data-existing-detail-action="enable-esa" data-domain="${escapeHtml(domain)}" data-target="${escapeHtml(domain)}" data-accel="${escapeHtml(accelDomain)}" ${enabled || !accelDomain ? 'disabled' : ''} title="${enabled ? `已开通 ${escapeHtml(accelDomain)}` : accelDomain ? `开通 ESA：${escapeHtml(accelDomain)} -> ${escapeHtml(domain)}` : '未配置 ESA 站点'}">
-        <i data-lucide="${enabled ? 'check-circle' : 'globe'}"></i><span>${enabled ? '已开通 ESA' : '开通 ESA'}</span>
-      </button>
-    </div>
   `;
-  el('existing-lucky-modal').classList.remove('hidden');
+  $('drawer-foot').innerHTML = `
+    <button type="button" class="btn" data-existing-detail-action="copy" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" ${enabled ? '' : `data-port="${escapeHtml(rule.listenPort || '')}"`} title="复制域名">
+      <i data-lucide="copy"></i><span>复制域名</span>
+    </button>
+    <button type="button" class="btn" data-existing-detail-action="open" data-domain="${escapeHtml(enabled ? accelDomain : domain)}" data-port="${enabled ? '' : escapeHtml(rule.listenPort || '')}" title="打开域名">
+      <i data-lucide="external-link"></i><span>打开</span>
+    </button>
+    <button type="button" class="btn" data-existing-detail-action="import" data-key="${escapeHtml(rule.key)}" ${rule.managed ? '' : 'disabled'} title="${rule.managed ? '导入为面板应用' : '手动规则不支持导入'}">
+      <i data-lucide="download"></i><span>${rule.managed ? '导入为面板应用' : '手动规则'}</span>
+    </button>
+    <button type="button" class="btn ${enabled ? 'btn-done' : 'btn-secondary'}" data-existing-detail-action="enable-esa" data-domain="${escapeHtml(domain)}" data-target="${escapeHtml(domain)}" data-accel="${escapeHtml(accelDomain)}" ${enabled || !accelDomain ? 'disabled' : ''} title="${enabled ? `已开通 ${escapeHtml(accelDomain)}` : accelDomain ? `开通 ESA：${escapeHtml(accelDomain)} -> ${escapeHtml(domain)}` : '未配置 ESA 站点'}">
+      <i data-lucide="${enabled ? 'check-circle' : 'globe'}"></i><span>${enabled ? '已开通 ESA' : '开通 ESA'}</span>
+    </button>
+  `;
+  openDrawer();
   refreshIcons();
 }
 
 export function closeExistingLuckyModal() {
-  el('existing-lucky-modal')?.classList.add('hidden');
+  closeDrawer();
 }
 
 export function openExistingEsaModal(recordId) {
   const domain = findEsaDomainById(recordId);
   if (!domain) return;
-  el('existing-esa-modal-title').textContent = domain.name || 'ESA 加速域名详情';
-  el('existing-esa-modal-body').innerHTML = `
+  $('drawer-title-text').textContent = domain.name || 'ESA 加速域名详情';
+  const titleIcon = document.querySelector('#drawer-title svg');
+  if (titleIcon) titleIcon.setAttribute('data-lucide', 'globe');
+  $('drawer-body').innerHTML = `
     <dl class="kv">
       <dt>域名</dt><dd class="mono">${escapeHtml(domain.name || '—')}</dd>
       <dt>类型</dt><dd class="mono">${escapeHtml(domain.type || '—')}</dd>
@@ -599,25 +604,25 @@ export function openExistingEsaModal(recordId) {
       <dt>加速状态</dt><dd><span class="pill on">已启用</span>（CNAME 接入不允许关闭）</dd>
       <dt>recordId</dt><dd class="mono">${escapeHtml(String(domain.id || '—'))}</dd>
     </dl>
-    <div class="modal-actions">
-      <button type="button" class="btn" data-existing-esa-detail-action="edit" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="编辑 ESA 记录">
-        <i data-lucide="edit-3"></i><span>编辑</span>
-      </button>
-      <button type="button" class="btn btn-danger" data-existing-esa-detail-action="delete" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="删除 ESA 记录（可连带删 DDNS CNAME）">
-        <i data-lucide="trash-2"></i><span>删除</span>
-      </button>
-      <button type="button" class="btn" data-existing-esa-detail-action="copy" data-domain="${escapeHtml(domain.name)}" title="复制域名">
-        <i data-lucide="copy"></i><span>复制域名</span>
-      </button>
-      <button type="button" class="btn" data-existing-esa-detail-action="open" data-domain="${escapeHtml(domain.name)}" title="打开域名">
-        <i data-lucide="external-link"></i><span>打开</span>
-      </button>
-    </div>
   `;
-  el('existing-esa-modal').classList.remove('hidden');
+  $('drawer-foot').innerHTML = `
+    <button type="button" class="btn" data-existing-esa-detail-action="edit" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="编辑 ESA 记录">
+      <i data-lucide="edit-3"></i><span>编辑</span>
+    </button>
+    <button type="button" class="btn btn-danger" data-existing-esa-detail-action="delete" data-record-id="${escapeHtml(String(domain.id || ''))}" data-domain="${escapeHtml(domain.name)}" title="删除 ESA 记录（可连带删 DDNS CNAME）">
+      <i data-lucide="trash-2"></i><span>删除</span>
+    </button>
+    <button type="button" class="btn" data-existing-esa-detail-action="copy" data-domain="${escapeHtml(domain.name)}" title="复制域名">
+      <i data-lucide="copy"></i><span>复制域名</span>
+    </button>
+    <button type="button" class="btn" data-existing-esa-detail-action="open" data-domain="${escapeHtml(domain.name)}" title="打开域名">
+      <i data-lucide="external-link"></i><span>打开</span>
+    </button>
+  `;
+  openDrawer();
   refreshIcons();
 }
 
 export function closeExistingEsaModal() {
-  el('existing-esa-modal')?.classList.add('hidden');
+  closeDrawer();
 }

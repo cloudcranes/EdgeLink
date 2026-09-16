@@ -1,9 +1,8 @@
-// 纯 SVG / DOM 渲染：延迟柱状图（当前快照）+ 折线图（历史）
-// 无外部依赖，主题色全部走 CSS 变量。
-
+// 性能图：单应用一行折线（6 app 颜色不同透明度区分）
+// 主题色全部走 CSS 变量，6 条折线用 var(--accent) 不同透明度叠加（异常=红）。
 import { escapeHtml } from './ui.js';
 
-const SPARK_W = 120;
+const SPARK_W = 240;
 const SPARK_H = 28;
 
 /* ---------- 折线（sparkline）：返回 SVG 字符串 ---------- */
@@ -24,52 +23,61 @@ function buildSparkline(points, opts = {}) {
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
-  // 失败点用红色描点（status >= 400 || ok=false）
   const dotAttrs = opts.className ? `class="${opts.className}"` : '';
   return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">` +
     `<polyline ${dotAttrs} fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" points="${pts}"/>` +
     '</svg>';
 }
 
-/* ---------- 折线区（每应用一行：名称 + cdn 折线 + 当前延迟） ---------- */
-export function renderSparklines(container, series, appsMeta = {}) {
+/* ---------- 性能图：1 个大块，6 app 一行一折线 ---------- */
+/* 主题色用 var(--accent) 不同透明度叠加，避免多色噪点；异常点/段用红叠加 */
+const APP_OPACITIES = [1.0, 0.8, 0.6, 0.5, 0.4, 0.3];
+
+export function renderPerfLineChart(container, series, appsMeta = {}, opts = {}) {
   if (!container) return;
-  const keys = Object.keys(series || {});
+  const keys = Object.keys(series || {}).filter((k) => k.endsWith(':cdn'));
   if (keys.length === 0) {
-    container.innerHTML = '<div class="empty-state"><i data-lucide="activity"></i><span>暂无历史数据，先点击「连通自检」若干次后将自动累计。</span></div>';
+    container.innerHTML = '<div class="empty-state"><i data-lucide="activity"></i><span>暂无历史数据，多次「连通自检」后自动累计。</span></div>';
     return;
   }
-  // 按 appId 分组，保持应用维度（仅 cdn 序列）
-  const byApp = new Map();
+  // 收集所有应用（去重 appId），保持顺序
+  const seen = new Set();
+  const apps = [];
   for (const key of keys) {
     const sepIdx = key.lastIndexOf(':');
     const appId = key.slice(0, sepIdx);
-    const label = key.slice(sepIdx + 1);
-    if (!byApp.has(appId)) byApp.set(appId, []);
-    byApp.get(appId).push({ label, points: series[key] });
+    if (seen.has(appId)) continue;
+    seen.add(appId);
+    apps.push({ appId, points: series[key] || [] });
   }
-  const rows = [];
-  for (const [appId, lines] of byApp) {
-    const meta = appsMeta[appId] || { name: appId.slice(0, 8) };
-    const cdnLine = lines.find((l) => l.label === 'cdn');
-    const lastCdn = cdnLine?.points?.[cdnLine.points.length - 1];
-    rows.push(`
-      <div class="spark-row">
-        <span class="spark-name">${escapeHtml(meta.name)}</span>
-        <span class="spark-line cdn">${cdnLine ? buildSparkline(cdnLine.points, { className: 'spark-cdn' }) : '<span class="spark-empty">—</span>'}<span class="spark-cap">cdn ${lastCdn ? lastCdn.latency + 'ms' : ''}</span></span>
-      </div>`);
-  }
+  const rows = apps.map((a, idx) => {
+    const meta = appsMeta[a.appId] || { name: a.appId.slice(0, 8) };
+    const last = a.points[a.points.length - 1];
+    const lastLat = last?.latency ?? '—';
+    const lastStatus = last?.ok === false || (last && last.status && last.status >= 400);
+    const opacity = APP_OPACITIES[idx % APP_OPACITIES.length];
+    return `
+      <div class="perf-line-row${lastStatus ? ' has-error' : ''}" style="color: var(--accent); opacity: ${opacity}">
+        <span class="perf-line-name" style="color: var(--text); opacity: 1">${escapeHtml(meta.name)}</span>
+        <span class="perf-line-svg-wrap">${buildSparkline(a.points, { width: 240, height: 28, className: 'perf-line-svg-path' })}</span>
+        <span class="perf-line-last" style="color: var(--muted); opacity: 1">${lastLat}ms</span>
+      </div>`;
+  });
   container.innerHTML = rows.join('');
 }
 
-/* ---------- 柱状图（当前连通自检快照） ---------- */
+/* ---------- 旧接口保留：renderSparklines（不再被 main.js 调用，但保留以防外部使用） ---------- */
+export function renderSparklines(container, series, appsMeta = {}) {
+  return renderPerfLineChart(container, series, appsMeta);
+}
+
+/* ---------- 旧接口保留：renderLatencyBars（已不用，但保留兼容） ---------- */
 export function renderLatencyBars(container, results) {
   if (!container) return;
   if (!results || results.length === 0) {
     container.innerHTML = '<div class="empty-state"><i data-lucide="inbox"></i><span>暂无应用，先在「应用管理」添加。</span></div>';
     return;
   }
-  // 归一化上限
   let maxMs = 1;
   for (const r of results) {
     for (const c of r.checks || []) {
