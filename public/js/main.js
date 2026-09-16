@@ -353,6 +353,22 @@ function bindEvents() {
       deleteApp(id);
     }
   });
+  // 抽屉 body 里的域名行操作（复制/打开）——和 foot 共用 data-drawer-action
+  document.getElementById('drawer-body').addEventListener('click', async (event) => {
+    const btn = event.target.closest('button[data-drawer-action]');
+    if (!btn) return;
+    const action = btn.dataset.drawerAction;
+    const domain = btn.dataset.domain;
+    if (action === 'copy' && domain) {
+      const ok = await copyText(domain);
+      if (ok) showToast(`已复制 ${domain}`, 'ok');
+      else showToast('复制失败', 'err');
+    } else if (action === 'open' && domain) {
+      const port = btn.dataset.port || '';
+      const url = port ? `https://${domain}:${port}` : `https://${domain}`;
+      window.open(url, '_blank', 'noopener');
+    }
+  });
   // 抽屉关闭（背景 / 关闭按钮 / Esc）
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);
   document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);

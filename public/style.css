@@ -3503,6 +3503,52 @@ tbody tr {
   word-break: break-all;
 }
 
+/* 抽屉内域名行：文本 + 行内图标按钮（复制/打开） */
+.kv dd.domain-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kv dd.domain-cell .domain-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  word-break: break-all;
+}
+.kv dd.domain-cell .domain-actions {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--accent-strong);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: var(--accent-border);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.icon-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
 /* ---------- 弹窗底部按钮行 ---------- */
 
 .modal-actions {
