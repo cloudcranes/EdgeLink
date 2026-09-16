@@ -44,10 +44,10 @@ function register(app) {
           const certs = await esaListCertificates(client, config.esa.siteId, '');
           summary.esaCertificates = certs.length;
           if (summary.rootDomain) {
-            const cdnKeyword = `*.cdn.${summary.rootDomain}`.toLowerCase();
-            const nasKeyword = `*.nas.${summary.rootDomain}`.toLowerCase();
+            // 修：原代码查的是 `.cdn.` 包含（命名是 nas 但逻辑是 cdn），现与 nas-check 对齐查 `*.nas.${root}` SAN
+            const target = `*.nas.${summary.rootDomain}`.toLowerCase();
             summary.esaNasCertificate = certs.some((c) =>
-              Array.isArray(c.sans) && c.sans.some((s) => String(s).toLowerCase().includes('.cdn.' + summary.rootDomain)),
+              Array.isArray(c.sans) && c.sans.some((s) => String(s).toLowerCase() === target),
             );
           }
         }
@@ -65,11 +65,18 @@ function register(app) {
           summary.luckySsl = list.length;
           if (summary.rootDomain) {
             const target = `*.nas.${summary.rootDomain}`.toLowerCase();
+            // 与 /api/lucky/ssl/nas-check 对齐：SAN + Remark 双匹配（v2.27.2 SAN 常空，靠 Remark 兜底）
             summary.luckyNasSsl = list.some((cert) => {
               const ext = parseSyncRecord(cert.ExtParams) || {};
               const info = parseSyncRecord(cert.CertsInfo) || {};
-              const sans = [...(ext.SubDomainList || []), ...(info.SAN ? [info.SAN] : [])];
-              return sans.some((s) => String(s).toLowerCase() === target);
+              const sans = [
+                ...(ext.SubDomainList || []),
+                ...(info.SAN ? [info.SAN] : []),
+                ...(ext.acmeDomains || []),
+              ];
+              if (sans.some((s) => String(s).toLowerCase() === target)) return true;
+              if (String(cert.Remark || '').toLowerCase() === target) return true;
+              return false;
             });
           }
         }
