@@ -3,7 +3,7 @@ import { addOrUpdateApp, closeAppDetailModal, closeDrawer, closeQrModal, deleteA
 import { renderPerfLineChart } from './charts.js';
 import { fillFormFromConfig, gatherConfig, loadConfig, renderSiteSelect, saveConfig, state } from './state.js';
 import { refreshStatus } from './status.js';
-import { appendLog, clearLogs, confirmDialog, copyText, openDomain, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
+import { appendLog, clearLogs, confirmDialog, copyText, escapeHtml, openDomain, refreshIcons, setSaveState, showBanner, showToast } from './ui.js';
 import { importLuckyRule, enableEsaForRule, enableAllEsa, editEsaRecord, deleteEsaRecord, loadExistingRules, renderExistingRules } from './existing.js';
 import { refreshQuickStart } from './quickstart.js';
 import { refreshSummary } from './summary.js';

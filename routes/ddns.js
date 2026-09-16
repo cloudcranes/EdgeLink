@@ -205,6 +205,78 @@ function register(app) {
       res.json({ ok: true, ...result });
     }),
   );
+
+  // 公网解析状态（nas 子域）：聚合 Lucky DDNS 任务 + alidns 解析记录
+  // 输出 items[]：每条 = 一个 (子域 + 类型) 解析点，含任务引用与 alidns 命中状态
+  app.get(
+    '/api/lucky/ddns/pending',
+    asyncHandler(async (req, res) => {
+      const config = readConfig();
+      const rootDomain = String(config.esa?.rootDomain || '').toLowerCase();
+      const tasks = await getLuckyDdnsTasks(config).catch(() => []);
+      // 以 Lucky DDNS 任务的 Records 为主源；合并 task 元数据
+      const itemsMap = new Map(); // key = `${subDomain}|${type}` -> item
+      const wildcardTasks = []; // 任务中含 *.nas 通配（用 task 本身标记）
+      for (const task of tasks) {
+        const taskMeta = { name: task.TaskName || '(未命名)', enable: task.Enable !== false };
+        for (const r of task.Records || []) {
+          const sd = String(r.SubDomain || '').toLowerCase();
+          const type = String(r.Type || '').toUpperCase();
+          if (!sd || !type) continue;
+          const fullDomain = sd.endsWith('.' + rootDomain) || sd.includes('.')
+            ? sd
+            : `${sd}.${rootDomain}`;
+          const key = `${sd}|${type}`;
+          if (!itemsMap.has(key)) {
+            itemsMap.set(key, {
+              fullDomain,
+              subDomain: sd,
+              domainName: rootDomain,
+              type,
+              tasks: [],
+              status: 'pending',
+              hasA: false,
+              hasAAAA: false,
+            });
+          }
+          const item = itemsMap.get(key);
+          item.tasks.push(taskMeta);
+        }
+        // 检测 *.nas 通配任务
+        const hasWildcard = (task.Records || []).some(
+          (r) => r.Type === 'AAAA' && String(r.SubDomain || '') === '*.nas',
+        );
+        if (hasWildcard) wildcardTasks.push(taskMeta);
+      }
+      // 查 alidns 解析记录，匹配 A / AAAA 命中
+      if (rootDomain) {
+        const alidnsRecords = await alidnsListRecords(config, rootDomain).catch(() => []);
+        const recordsBySub = new Map();
+        for (const r of alidnsRecords || []) {
+          const rr = String(r.RR || '').toLowerCase();
+          const type = String(r.type || '').toUpperCase();
+          if (rr && !recordsBySub.has(rr)) recordsBySub.set(rr, {});
+          if (rr) recordsBySub.get(rr)[type] = true;
+        }
+        for (const item of itemsMap.values()) {
+          const matches = recordsBySub.get(item.subDomain);
+          if (matches) {
+            item.hasA = !!matches.A;
+            item.hasAAAA = !!matches.AAAA;
+            item.status = (item.hasA || item.hasAAAA) ? 'ok' : 'pending';
+          }
+        }
+      }
+      // 通配任务标记
+      const wildcardNote = wildcardTasks.length ? `含 ${wildcardTasks.length} 个 *.nas 通配任务` : '';
+      res.json({
+        ok: true,
+        items: Array.from(itemsMap.values()),
+        wildcardTasks,
+        message: wildcardNote,
+      });
+    }),
+  );
 }
 
 module.exports = { register };
