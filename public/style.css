@@ -2180,6 +2180,13 @@ details.ddns-sub > summary.ddns-sub-head:hover {
   text-overflow: ellipsis;
   max-width: 240px;
 }
+.ddns-records td.ddns-content {
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
 
 .ddns-records th {
   color: var(--muted);

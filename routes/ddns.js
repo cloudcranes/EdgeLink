@@ -6,6 +6,29 @@ const { alidnsListRecords, alidnsDeleteRecord } = require('../lib/alidns');
 const { pushServerLog } = require('../lib/logs');
 const { asyncHandler } = require('../utils/http');
 
+// 取一个 task 的明细 records（含 SyncRecordData.content）
+async function getTaskDetailRecords(config, taskKey) {
+  if (!taskKey) return [];
+  try {
+    const { baseUrl, token } = await luckyLogin(config);
+    const detail = await luckyRequest(baseUrl, token, 'GET', `/api/ddns/task/${taskKey}`);
+    const task = detail.task || detail.data || {};
+    return task.Records || [];
+  } catch {
+    return [];
+  }
+}
+
+// 提取记录值（CNAMEContent / IPv6Addr / Value / content，兼容旧版 Lucky）
+function extractRecordContent(r) {
+  if (!r) return '';
+  const srd = r.SyncRecordData && typeof r.SyncRecordData === 'object' ? r.SyncRecordData : null;
+  return (
+    srd?.CNAMEContent || srd?.ipv6Address || srd?.Value || srd?.content ||
+    r.CNAMEContent || r.Value || r.Content || r.content || ''
+  );
+}
+
 function register(app) {
   app.get(
     '/api/lucky/ddns/tasks',
@@ -13,6 +36,15 @@ function register(app) {
       const config = readConfig();
       const tasks = await getLuckyDdnsTasks(config);
       const rootDomain = String(config.esa?.rootDomain || '').toLowerCase();
+      // list 端点不带 content，并发拉每个 task 的 detail 补全 content 字段
+      const detailMap = new Map();
+      await Promise.all(
+        tasks.map(async (task) => {
+          if (!task.TaskKey) return;
+          const records = await getTaskDetailRecords(config, task.TaskKey);
+          detailMap.set(task.TaskKey, records);
+        }),
+      );
       const summary = tasks.map((task) => ({
         taskKey: task.TaskKey,
         taskName: task.TaskName,
@@ -20,13 +52,22 @@ function register(app) {
         enable: task.Enable !== false,
         dnsProvider: (task.DNS || {}).Name || '',
         recordCount: (task.Records || []).length,
-        records: (task.Records || []).map((r) => ({
-          key: r.Key || '',
-          subDomain: r.SubDomain || '',
-          domainName: r.DomainName || '',
-          type: r.Type || '',
-          content: r.CNAMEContent || r.Value || '',
-        })),
+        records: (task.Records || []).map((r) => {
+          // 在 detail records 中按 Key 找匹配的 content
+          const detailRecs = detailMap.get(task.TaskKey) || [];
+          const matched = detailRecs.find((d) => d.Key === r.Key) || {};
+          const content =
+            extractRecordContent(matched) ||
+            extractRecordContent(r) ||
+            '';
+          return {
+            key: r.Key || '',
+            subDomain: r.SubDomain || '',
+            domainName: r.DomainName || '',
+            type: r.Type || '',
+            content,
+          };
+        }),
         hasNasWildcard:
           rootDomain &&
           (task.Records || []).some(

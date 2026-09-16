@@ -56,6 +56,7 @@ function renderTaskCard(task) {
       (r) => `<tr>
         <td class="mono" title="子域" data-label="子域">${escapeHtml(r.subDomain || '')}</td>
         <td class="mono" title="类型" data-label="类型">${escapeHtml(r.type || '')}</td>
+        <td class="mono ddns-content" title="记录值" data-label="记录值">${escapeHtml(r.content || '—')}</td>
         <td class="mono" title="recordKey=${escapeHtml(r.key || '')}" data-label="recordKey"><span class="mono-key">${escapeHtml(r.key || '—')}</span></td>
         <td class="ddns-action" data-label="操作">
           <button type="button" class="btn" data-ddns-record-delete data-task-key="${escapeHtml(task.taskKey || '')}" data-record-key="${escapeHtml(r.key || '')}" data-sub-domain="${escapeHtml(r.subDomain || '')}" data-domain-name="${escapeHtml(r.domainName || '')}" data-type="${escapeHtml(r.type || '')}" title="从 Lucky DDNS 任务中移除此记录（不删 alidns 公网解析）">
@@ -87,7 +88,7 @@ function renderTaskCard(task) {
         <span class="ddns-task-preview">${escapeHtml(summary + more)}</span>
       </summary>
       <table class="ddns-records">
-        <thead><tr><th>子域</th><th>类型</th><th>recordKey</th><th class="ddns-action-th">操作</th></tr></thead>
+        <thead><tr><th>子域</th><th>类型</th><th>记录值</th><th>recordKey</th><th class="ddns-action-th">操作</th></tr></thead>
         <tbody>${recordRows}</tbody>
       </table>
     </details>`;
