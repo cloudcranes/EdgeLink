@@ -1220,9 +1220,9 @@ select:hover {
   height: 14px;
 }
 
-/* 旧 7 列布局的兼容：ddns-task / ddns-enable / ddns-col 在新结构中不再使用，
-   但保留定义以防外部缓存的 CSS 触发解析告警 */
-.ddns-task,
+/* 旧 7 列布局的兼容：ddns-enable / ddns-col 在新结构中不再使用，
+   但保留定义以防外部缓存的 CSS 触发解析告警。
+   注：.ddns-task 现在也是新版 <details class="ddns-task"> 的类，不能再 display:none。 */
 .ddns-type,
 .ddns-col,
 .ddns-enable {
