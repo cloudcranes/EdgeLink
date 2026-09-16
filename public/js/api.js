@@ -106,6 +106,8 @@ export const api = {
   audit: () => request('/api/audit'),
   auditFix: (appId) => request('/api/audit/fix', { method: 'POST', body: JSON.stringify({ appId: appId || null }) }),
   appHealth: () => request('/api/apps/health'),
+  appRecheck: (id) => request('/api/apps/status/recheck', { method: 'POST', body: JSON.stringify({ appId: id }) }),
+  appRecheckAll: () => request('/api/apps/status/recheck', { method: 'POST', body: JSON.stringify({}) }),
   deleteApp: (id, opts = {}) => {
     const params = new URLSearchParams();
     if (opts.purge) params.set('purge', '1');
