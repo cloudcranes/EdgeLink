@@ -395,15 +395,25 @@ function bindEvents() {
       // 锁定 UI，避免用户重复点击；refreshSummary 会按修复后的状态重画 banner+按钮
       btn.disabled = true;
       const originalHtml = btn.innerHTML;
-      btn.innerHTML = '<i data-lucide="loader-circle"></i><span>修复中…</span>';
-      window.lucide?.createIcons();
+      const setProgress = (done, total, current) => {
+        btn.innerHTML = `<i data-lucide="loader-circle"></i><span>修复 ${done}/${total}${current ? ` · ${current}` : ''}</span>`;
+        window.lucide?.createIcons();
+      };
+      setProgress(0, 0, '查询中…');
       let fixed = 0;
       let targets = [];
       try {
         const { fixEsaCname, fetchEsaCnameDiagnostics } = await import('./summary.js');
         const items = await fetchEsaCnameDiagnostics();
         targets = items.filter((i) => i.fixable);
-        for (const item of targets) {
+        if (targets.length === 0) {
+          showToast('没有需要修复的项目', 'ok');
+          await refreshSummary();
+          return;
+        }
+        for (let i = 0; i < targets.length; i++) {
+          const item = targets[i];
+          setProgress(i, targets.length, item.domain);
           try {
             await fixEsaCname(item.appId);
             fixed++;
