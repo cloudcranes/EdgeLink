@@ -546,8 +546,8 @@ button {
 }
 
 .panel-head h2 svg {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   color: var(--accent);
 }
 
@@ -618,8 +618,8 @@ button {
 }
 
 .btn svg {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
 }
 
@@ -828,8 +828,8 @@ select:hover {
 }
 
 .settings-card h2 svg {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   color: var(--accent);
 }
 
@@ -3342,8 +3342,8 @@ body {
 }
 
 .toast svg {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -3689,7 +3689,7 @@ tbody tr {
   color: var(--accent);
   flex-shrink: 0;
 }
-.health-metric-icon svg { width: 16px; height: 16px; }
+.health-metric-icon svg { width: 13px; height: 13px; }
 .health-metric-body { min-width: 0; flex: 1; }
 .health-metric-value {
   font-family: var(--font-mono);
@@ -3739,7 +3739,7 @@ tbody tr {
   font-family: var(--font-mono);
 }
 .pending-banner-icon { color: var(--warning); flex-shrink: 0; }
-.pending-banner-icon svg { width: 18px; height: 18px; }
+.pending-banner-icon svg { width: 13px; height: 13px; }
 .pending-banner-text { flex: 1; color: var(--text); }
 .pending-banner-text strong { color: var(--warning); font-weight: 700; }
 .pending-banner-action { flex-shrink: 0; }
@@ -3771,7 +3771,7 @@ tbody tr {
   color: var(--text);
   margin: 0;
 }
-.perf-block-title svg { width: 16px; height: 16px; color: var(--accent); }
+.perf-block-title svg { width: 13px; height: 13px; color: var(--accent); }
 .perf-block-range {
   display: flex;
   gap: 4px;
@@ -4104,7 +4104,7 @@ tbody tr {
   align-items: center;
   gap: 10px;
 }
-.drawer-title svg { width: 18px; height: 18px; color: var(--accent); }
+.drawer-title svg { width: 13px; height: 13px; color: var(--accent); }
 .drawer-close {
   width: 32px;
   height: 32px;
@@ -4123,7 +4123,7 @@ tbody tr {
   color: var(--text);
   transform: rotate(90deg);
 }
-.drawer-close svg { width: 16px; height: 16px; }
+.drawer-close svg { width: 13px; height: 13px; }
 .drawer-body {
   flex: 1;
   overflow-y: auto;
