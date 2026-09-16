@@ -80,22 +80,33 @@ export async function refreshSummary() {
     const banner = document.getElementById('pending-banner');
     const bannerText = document.getElementById('pending-banner-text');
     const bannerAction = document.getElementById('pending-banner-action');
+    const failedMenu = document.getElementById('pending-failed-menu');
+    const failedSummaryText = document.getElementById('pending-failed-summary-text');
+    const failedList = document.getElementById('pending-failed-list');
     if (banner && bannerText) {
       const errors = errorApps.length > 0;
       const cnameMissing = fixableCname.length > 0;
+      const hasFailedRetries = failedItems.length > 0;
       if (errors || cnameMissing) {
         banner.hidden = false;
         if (errors) {
           const names = errorApps.slice(0, 3).map((a) => a.name || a.prefix).join('、');
           const more = errorApps.length > 3 ? ` 等 ${errorApps.length} 个` : '';
           bannerText.innerHTML = `<strong>${errorApps.length}</strong> 个应用需要关注：${escapeHtml(names)}${escapeHtml(more)} · 最近失败：${escapeHtml(errorApps[0]?.lastError || '查看详情')}`;
+        } else if (hasFailedRetries) {
+          bannerText.innerHTML = `<strong>${failedItems.length}</strong> 项 ESA 修复失败，点击右侧「重试 N 项失败」单独处理`;
         } else {
           const names = fixableCname.slice(0, 3).map((i) => i.name || i.prefix).join('、');
           const more = fixableCname.length > 3 ? ` 等 ${fixableCname.length} 个` : '';
           bannerText.innerHTML = `<strong>${fixableCname.length}</strong> 个应用 ESA CNAME 未配置（${escapeHtml(names)}${escapeHtml(more)}），点击右侧一键修复`;
         }
         if (bannerAction) {
-          if (cnameMissing && !errors) {
+          // 有失败项待重试：主按钮切到「重试」；否则保持一键修复
+          if (hasFailedRetries) {
+            bannerAction.hidden = false;
+            bannerAction.innerHTML = `<i data-lucide="rotate-cw"></i><span>重试 ${failedItems.length} 项</span>`;
+            bannerAction.dataset.mode = 'fix-cname-retry';
+          } else if (cnameMissing && !errors) {
             bannerAction.hidden = false;
             bannerAction.innerHTML = '<i data-lucide="wand-2"></i><span>一键修复</span>';
             bannerAction.dataset.mode = 'fix-cname';
@@ -105,10 +116,29 @@ export async function refreshSummary() {
             bannerAction.dataset.mode = 'view-apps';
           }
         }
+        // 失败下拉：只有 hasFailedRetries 时显示
+        if (failedMenu && failedSummaryText && failedList) {
+          if (hasFailedRetries) {
+            failedMenu.hidden = false;
+            failedSummaryText.textContent = `失败 ${failedItems.length} 项 ▾`;
+            failedList.innerHTML = failedItems.map((f) => `
+              <button type="button" class="pending-failed-item" data-failed-app="${escapeHtml(f.appId)}" title="${escapeHtml(f.error || '')}">
+                <span class="pending-failed-item-domain">${escapeHtml(f.domain)}</span>
+                <span class="pending-failed-item-error">${escapeHtml(f.error || '')}</span>
+              </button>
+            `).join('');
+          } else {
+            failedMenu.hidden = true;
+            failedMenu.removeAttribute('open');
+            failedList.innerHTML = '';
+          }
+        }
         refreshIcons();
       } else {
         banner.hidden = true;
         if (bannerAction) bannerAction.hidden = true;
+        if (failedMenu) { failedMenu.hidden = true; failedMenu.removeAttribute('open'); }
+        if (failedList) failedList.innerHTML = '';
       }
     }
 
@@ -131,6 +161,20 @@ export async function fetchEsaCnameDiagnostics() {
 export async function fixEsaCname(appId) {
   await api.fixEsaCname(appId);
 }
+
+// 失败项管理：模块作用域，render 失败下拉 + 单条 retry
+let failedItems = [];
+export function setFailedItems(list) { failedItems = Array.isArray(list) ? list : []; }
+export function getFailedItems() { return failedItems; }
+export function removeFailedItem(appId) {
+  failedItems = failedItems.filter((f) => f.appId !== appId);
+}
+export function addFailedItem(item) {
+  const idx = failedItems.findIndex((f) => f.appId === item.appId);
+  if (idx >= 0) failedItems[idx] = item; // 已存在则覆盖（更新 error 信息）
+  else failedItems.push(item);
+}
+export function clearFailedItems() { failedItems = []; }
 
 // 单独刷新异常悬浮按钮（renderApps 之后调用，因为 renderApps 可能改了 status）
 export function refreshExceptionFab() {

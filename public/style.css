@@ -3798,6 +3798,52 @@ tbody tr {
 .pending-banner-text strong { color: var(--warning); font-weight: 700; }
 .pending-banner-action { flex-shrink: 0; }
 
+.pending-banner-actions { display: inline-flex; gap: 6px; flex-shrink: 0; align-items: center; }
+
+/* 失败项下拉：每条失败应用单独按钮，可点哪个重试哪个 */
+.pending-failed-menu { position: relative; }
+.pending-failed-menu > summary { list-style: none; cursor: pointer; user-select: none; }
+.pending-failed-menu > summary::-webkit-details-marker { display: none; }
+.pending-failed-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 280px;
+  max-width: 420px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pending-failed-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.pending-failed-item:hover { background: var(--accent-soft); color: var(--accent-strong); }
+.pending-failed-item-domain { font-family: var(--font-mono); font-weight: 600; word-break: break-all; }
+.pending-failed-item-error { font-size: 11px; color: var(--danger); word-break: break-all; }
+.pending-failed-item:hover .pending-failed-item-error { color: var(--danger); opacity: 0.85; }
+
 /* ---------- 性能图大卡（1 大折线 + 时间切换） ---------- */
 
 .perf-block {

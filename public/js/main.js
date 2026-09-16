@@ -387,47 +387,32 @@ function bindEvents() {
       openAppDetailModal(firstError.id);
     }
   });
-  // 主页待处理条：按按钮 data.mode 分支跳转（view-apps / fix-cname）
+  // 主页待处理条：按按钮 data.mode 分支（view-apps / fix-cname / fix-cname-retry）
+  // 失败下拉里的单条按钮：点哪个修哪个（数据写 summary.js 模块作用域）
   document.getElementById('pending-banner-action').addEventListener('click', async (event) => {
     const btn = event.currentTarget;
     const mode = btn.dataset.mode;
-    if (mode === 'fix-cname') {
-      // 锁定 UI，避免用户重复点击；refreshSummary 会按修复后的状态重画 banner+按钮
+    if (mode === 'fix-cname' || mode === 'fix-cname-retry') {
       btn.disabled = true;
       const originalHtml = btn.innerHTML;
       const setProgress = (done, total, current) => {
         btn.innerHTML = `<i data-lucide="loader-circle"></i><span>修复 ${done}/${total}${current ? ` · ${current}` : ''}</span>`;
         window.lucide?.createIcons();
       };
-      // 失败项隔离重试：dataset.failed 存 JSON [{appId,domain,error}]
-      const readFailed = () => {
-        try { return JSON.parse(btn.dataset.failed || '[]'); } catch { return []; }
-      };
-      const writeFailed = (list) => { btn.dataset.failed = JSON.stringify(list); };
-
-      // 重试模式：dataset.failed 非空 → 只跑这些（不重新查 diagnostics）
-      const retryList = readFailed();
-      const isRetry = retryList.length > 0;
-      const setRetryHtml = (failedList) => {
-        btn.dataset.failed = JSON.stringify(failedList);
-        btn.innerHTML = `<i data-lucide="rotate-cw"></i><span>重试 ${failedList.length} 项失败</span>`;
-        window.lucide?.createIcons();
-      };
-
-      setProgress(0, 0, isRetry ? '加载失败项…' : '查询中…');
+      setProgress(0, 0, mode === 'fix-cname-retry' ? '加载失败项…' : '查询中…');
       let fixed = 0;
       let targets = [];
-      let failedThisRun = [];
       try {
-        const { fixEsaCname, fetchEsaCnameDiagnostics } = await import('./summary.js');
-        if (isRetry) {
-          targets = retryList;
+        const { fixEsaCname, fetchEsaCnameDiagnostics, getFailedItems, setFailedItems, addFailedItem, removeFailedItem } = await import('./summary.js');
+        if (mode === 'fix-cname-retry') {
+          targets = getFailedItems().slice();
+          setFailedItems([]); // 清空本轮先，由循环重新填充仍失败的
         } else {
           const items = await fetchEsaCnameDiagnostics();
           targets = items.filter((i) => i.fixable);
         }
         if (targets.length === 0) {
-          writeFailed([]);
+          setFailedItems([]);
           showToast('没有需要修复的项目', 'ok');
           await refreshSummary();
           return;
@@ -438,31 +423,20 @@ function bindEvents() {
           try {
             await fixEsaCname(item.appId);
             fixed++;
+            // 整批 retry 模式：成功的从失败列表移除
+            if (mode === 'fix-cname-retry') removeFailedItem(item.appId);
           } catch (error) {
-            failedThisRun.push({ appId: item.appId, domain: item.domain, error: error.message });
+            addFailedItem({ appId: item.appId, domain: item.domain, error: error.message });
             appendLog('一键修复', 'error', `${item.domain} 修复失败：${error.message}`);
           }
         }
         appendLog('一键修复', 'ok', `已尝试修复 ${targets.length} 个，${fixed} 个成功`);
         showToast(`已修复 ${fixed}/${targets.length} 个 ESA CNAME`, 'ok');
-        writeFailed(failedThisRun);
       } finally {
-        // 等 refreshSummary 跑完再决定按钮状态
         await refreshSummary();
-        if (btn.hidden) return; // banner 已 hidden（全部成功或 diagnostics 已清空）
-        const finalFailed = readFailed();
-        if (finalFailed.length > 0) {
-          // 还有失败项：切到「重试 N 项失败」模式（保持 fix-cname 触发同一 handler，但走重试分支）
-          btn.disabled = false;
-          setRetryHtml(finalFailed);
-          btn.title = finalFailed.map((f) => `${f.domain}: ${f.error}`).join('\n');
-          return;
-        }
-        // 没失败项但还在 fixable：还原回原始一键修复
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        btn.title = '';
-        window.lucide?.createIcons();
+        if (btn.hidden) return;
+        // refreshSummary 已根据当前 failedItems 重画了 banner / 失败下拉 / 按钮
+        // 不需要在这里覆盖按钮文案
       }
       return;
     }
@@ -470,6 +444,45 @@ function bindEvents() {
     if (firstError) {
       if (location.hash !== '#/apps') location.hash = '#/apps';
       openAppDetailModal(firstError.id);
+    }
+  });
+
+  // 失败下拉单条点击：点哪个修哪个
+  document.getElementById('pending-failed-list').addEventListener('click', async (event) => {
+    const item = event.target.closest('button[data-failed-app]');
+    if (!item) return;
+    const appId = item.dataset.failedApp;
+    const domainEl = item.querySelector('.pending-failed-item-domain');
+    const domain = domainEl ? domainEl.textContent : '';
+    // 关闭下拉
+    const menu = document.getElementById('pending-failed-menu');
+    if (menu) menu.removeAttribute('open');
+    const btn = document.getElementById('pending-banner-action');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-circle"></i><span>重试 ${domain}</span>`;
+    window.lucide?.createIcons();
+    try {
+      const { fixEsaCname, getFailedItems, removeFailedItem, addFailedItem } = await import('./summary.js');
+      try {
+        await fixEsaCname(appId);
+        removeFailedItem(appId);
+        appendLog('单条重试', 'ok', `${domain} 修复成功`);
+        showToast(`${domain} 修复成功`, 'ok');
+      } catch (error) {
+        // 仍在失败列表：更新错误信息
+        const list = getFailedItems();
+        const idx = list.findIndex((f) => f.appId === appId);
+        if (idx >= 0) addFailedItem({ appId, domain, error: error.message });
+        appendLog('单条重试', 'error', `${domain} 修复失败：${error.message}`);
+        showToast(`${domain} 修复失败：${error.message}`, 'err');
+      }
+    } finally {
+      await refreshSummary();
+      if (btn.hidden) return;
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+      window.lucide?.createIcons();
     }
   });
   // 性能图时间范围切换

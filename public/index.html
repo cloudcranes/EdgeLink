@@ -155,9 +155,17 @@
             <div id="pending-banner" class="pending-banner" hidden>
               <span class="pending-banner-icon"><i data-lucide="alert-triangle"></i></span>
               <span class="pending-banner-text" id="pending-banner-text"></span>
-              <button class="btn btn-ghost pending-banner-action" id="pending-banner-action" type="button">
-                <i data-lucide="arrow-right"></i><span>查看</span>
-              </button>
+              <div class="pending-banner-actions">
+                <details class="pending-failed-menu" id="pending-failed-menu" hidden>
+                  <summary class="btn btn-ghost" id="pending-failed-summary" type="button">
+                    <i data-lucide="rotate-cw"></i><span id="pending-failed-summary-text">重试 0 项失败</span>
+                  </summary>
+                  <div class="pending-failed-list" id="pending-failed-list"></div>
+                </details>
+                <button class="btn btn-ghost pending-banner-action" id="pending-banner-action" type="button">
+                  <i data-lucide="arrow-right"></i><span>查看</span>
+                </button>
+              </div>
             </div>
           </section>
 
