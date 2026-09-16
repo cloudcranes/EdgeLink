@@ -392,15 +392,17 @@ function bindEvents() {
     const btn = event.currentTarget;
     const mode = btn.dataset.mode;
     if (mode === 'fix-cname') {
+      // 锁定 UI，避免用户重复点击；refreshSummary 会按修复后的状态重画 banner+按钮
       btn.disabled = true;
-      const original = btn.innerHTML;
+      const originalHtml = btn.innerHTML;
       btn.innerHTML = '<i data-lucide="loader-circle"></i><span>修复中…</span>';
       window.lucide?.createIcons();
+      let fixed = 0;
+      let targets = [];
       try {
         const { fixEsaCname, fetchEsaCnameDiagnostics } = await import('./summary.js');
         const items = await fetchEsaCnameDiagnostics();
-        const targets = items.filter((i) => i.fixable);
-        let fixed = 0;
+        targets = items.filter((i) => i.fixable);
         for (const item of targets) {
           try {
             await fixEsaCname(item.appId);
@@ -411,11 +413,16 @@ function bindEvents() {
         }
         appendLog('一键修复', 'ok', `已尝试修复 ${targets.length} 个，${fixed} 个成功`);
         showToast(`已修复 ${fixed}/${targets.length} 个 ESA CNAME`, 'ok');
-        await refreshSummary();
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = original;
-        window.lucide?.createIcons();
+        // 等 refreshSummary 跑完再还原按钮（让 summary 决定 banner 是否隐藏 + 按钮新文案）
+        await refreshSummary();
+        // 若 summary 没改 banner（如还在 fixable），还原回原始一键修复按钮文案
+        if (!btn.hidden) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+          window.lucide?.createIcons();
+        }
+        // 若 banner 已 hidden，summary 已把按钮 hidden=true，无需还原
       }
       return;
     }
