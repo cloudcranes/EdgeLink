@@ -1895,14 +1895,14 @@ details.ddns-panel > summary.panel-head:hover h2 {
   flex-direction: column;
 }
 
-.ddns-sub {
+.ddns-sub:not(details) {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 14px 18px 12px;
   border-top: 1px solid var(--border);
 }
-.ddns-sub:first-of-type {
+.ddns-sub:first-of-type:not(details) {
   border-top: 0;
   padding-top: 4px;
 }
