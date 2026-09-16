@@ -21,10 +21,14 @@ function numFlash(id) {
 
 export async function refreshSummary() {
   try {
-    const data = await api.fetchSummary();
+    const [data, diagItems] = await Promise.all([
+      api.fetchSummary(),
+      fetchEsaCnameDiagnostics(),
+    ]);
     const s = data.summary;
     const apps = state.config?.apps || [];
     const rootDomain = getRootDomain(state.config);
+    const fixableCname = diagItems.filter((i) => i.fixable);
 
     // 健康率 = 已就绪应用 / 应用总数
     const total = apps.length;
@@ -75,22 +79,57 @@ export async function refreshSummary() {
     // 主页待处理条
     const banner = document.getElementById('pending-banner');
     const bannerText = document.getElementById('pending-banner-text');
+    const bannerAction = document.getElementById('pending-banner-action');
     if (banner && bannerText) {
-      if (errorApps.length > 0) {
+      const errors = errorApps.length > 0;
+      const cnameMissing = fixableCname.length > 0;
+      if (errors || cnameMissing) {
         banner.hidden = false;
-        const names = errorApps.slice(0, 3).map((a) => a.name || a.prefix).join('、');
-        const more = errorApps.length > 3 ? ` 等 ${errorApps.length} 个` : '';
-        bannerText.innerHTML = `<strong>${errorApps.length}</strong> 个应用需要关注：${escapeHtml(names)}${escapeHtml(more)} · 最近失败：${escapeHtml(errorApps[0]?.lastError || '查看详情')}`;
+        if (errors) {
+          const names = errorApps.slice(0, 3).map((a) => a.name || a.prefix).join('、');
+          const more = errorApps.length > 3 ? ` 等 ${errorApps.length} 个` : '';
+          bannerText.innerHTML = `<strong>${errorApps.length}</strong> 个应用需要关注：${escapeHtml(names)}${escapeHtml(more)} · 最近失败：${escapeHtml(errorApps[0]?.lastError || '查看详情')}`;
+        } else {
+          const names = fixableCname.slice(0, 3).map((i) => i.name || i.prefix).join('、');
+          const more = fixableCname.length > 3 ? ` 等 ${fixableCname.length} 个` : '';
+          bannerText.innerHTML = `<strong>${fixableCname.length}</strong> 个应用 ESA CNAME 未配置（${escapeHtml(names)}${escapeHtml(more)}），点击右侧一键修复`;
+        }
+        if (bannerAction) {
+          if (cnameMissing && !errors) {
+            bannerAction.hidden = false;
+            bannerAction.innerHTML = '<i data-lucide="wand-2"></i><span>一键修复</span>';
+            bannerAction.dataset.mode = 'fix-cname';
+          } else {
+            bannerAction.hidden = false;
+            bannerAction.innerHTML = '<i data-lucide="arrow-right"></i><span>查看</span>';
+            bannerAction.dataset.mode = 'view-apps';
+          }
+        }
         refreshIcons();
       } else {
         banner.hidden = true;
+        if (bannerAction) bannerAction.hidden = true;
       }
     }
 
-    return { healthRate, errorApps, total, live };
+    return { healthRate, errorApps, total, live, fixableCname };
   } catch (error) {
     return { healthRate: null, errorApps: [], total: 0, live: 0, error: error.message };
   }
+}
+
+// 自愈诊断：扫描 ESA 加速域名 vs alidns CNAME 一致性
+export async function fetchEsaCnameDiagnostics() {
+  try {
+    const data = await api.fetchEsaCnameDiagnostics();
+    return data.items || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fixEsaCname(appId) {
+  await api.fixEsaCname(appId);
 }
 
 // 单独刷新异常悬浮按钮（renderApps 之后调用，因为 renderApps 可能改了 status）

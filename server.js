@@ -163,6 +163,7 @@ require('./routes/ddns').register(app);
 require('./routes/esa').register(app);
 require('./routes/audit').register(app);
 require('./routes/apps').register(app);
+require('./routes/diagnostics').register(app);
 
 const port = Number(process.env.PORT) || 8787;
 const host = process.env.HOST || '0.0.0.0';

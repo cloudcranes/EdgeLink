@@ -79,6 +79,9 @@ export const api = {
       body: JSON.stringify({ recordKey }),
     });
   },
+  fetchEsaCnameDiagnostics: () => request('/api/diagnostics/esa-cname'),
+  fixEsaCname: (appId) =>
+    request('/api/diagnostics/esa-cname/fix', { method: 'POST', body: JSON.stringify({ appId }) }),
   fetchEsaRules: () => request('/api/esa/rules'),
   enableDomain: (domain, target) =>
     request('/api/esa/enable-domain', { method: 'POST', body: JSON.stringify({ domain, target }) }),

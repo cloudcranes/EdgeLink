@@ -387,8 +387,38 @@ function bindEvents() {
       openAppDetailModal(firstError.id);
     }
   });
-  // 主页待处理条 → 同样跳到第一个异常
-  document.getElementById('pending-banner-action').addEventListener('click', () => {
+  // 主页待处理条：按按钮 data.mode 分支跳转（view-apps / fix-cname）
+  document.getElementById('pending-banner-action').addEventListener('click', async (event) => {
+    const btn = event.currentTarget;
+    const mode = btn.dataset.mode;
+    if (mode === 'fix-cname') {
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i data-lucide="loader-circle"></i><span>修复中…</span>';
+      window.lucide?.createIcons();
+      try {
+        const { fixEsaCname, fetchEsaCnameDiagnostics } = await import('./summary.js');
+        const items = await fetchEsaCnameDiagnostics();
+        const targets = items.filter((i) => i.fixable);
+        let fixed = 0;
+        for (const item of targets) {
+          try {
+            await fixEsaCname(item.appId);
+            fixed++;
+          } catch (error) {
+            appendLog('一键修复', 'error', `${item.domain} 修复失败：${error.message}`);
+          }
+        }
+        appendLog('一键修复', 'ok', `已尝试修复 ${targets.length} 个，${fixed} 个成功`);
+        showToast(`已修复 ${fixed}/${targets.length} 个 ESA CNAME`, 'ok');
+        await refreshSummary();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        window.lucide?.createIcons();
+      }
+      return;
+    }
     const firstError = (state.config?.apps || []).find((a) => a.status === 'failed' || (a.lastError && (a.status === 'building' || a.status === 'pending')));
     if (firstError) {
       if (location.hash !== '#/apps') location.hash = '#/apps';
