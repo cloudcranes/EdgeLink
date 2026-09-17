@@ -27,7 +27,17 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: 'npm'
       - run: npm ci --no-audit --no-fund
-      - run: npm test
+      - name: Run tests
+        id: run-tests
+        run: npm test 2>&1 | tee test-output.log; echo "exit=$?"
+        continue-on-error: true
+      - name: Upload test log on failure
+        if: steps.run-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-node-${{ matrix.node }}
+          path: test-output.log
+          retention-days: 7
 
   docker:
     name: Build & Push Docker Image
