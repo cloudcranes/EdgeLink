@@ -60,6 +60,29 @@ npm test
 
 90 个测试覆盖核心业务逻辑（部署配置、证书 SAN 校验、ESA 记录编辑 dryRun、DDNS 记录删除、自愈诊断状态机等）。
 
+## Docker
+
+```bash
+docker run -d \
+  --name edgelink \
+  -p 8787:8787 \
+  -v $(pwd)/data:/app/data \
+  -e PORT=8787 \
+  -e HOST=0.0.0.0 \
+  --restart unless-stopped \
+  ghcr.io/cloudcranes/edgelink:latest
+```
+
+数据卷 `/app/data` 存放 `config.json`（凭据）+ 快照/历史。容器内有 `wget` healthcheck，调 `/api/health`。
+
+镜像在 GitHub Actions 推 master/main/tag 时自动构建并发布到 `ghcr.io/cloudcranes/edgelink`，支持 `linux/amd64` + `linux/arm64`。
+
+## CI
+
+`.github/workflows/ci.yml`：
+- `test`：Node 20/22 矩阵跑 90 测试
+- `docker`：依赖 test 通过；登录 ghcr.io → docker/metadata-action 算 tag（`latest` / branch / semver / sha）→ docker/build-push-action 推 multi-arch
+
 ## 项目结构
 
 ```
