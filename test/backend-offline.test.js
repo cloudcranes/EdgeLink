@@ -23,6 +23,7 @@ const state = {
   taskDetail: null,
   rules: [],
   deleteRecordImpl: null,
+  alidnsRecords: [],
   calls: { deleteRecord: [], updateRecord: [], createRecord: [], ddnsPuts: [], rulePuts: [], listRecords: [], alidnsDelete: [] },
   fetchCalls: [],
 };
@@ -264,6 +265,7 @@ beforeEach(() => {
     taskDetail: null,
     rules: [],
     deleteRecordImpl: null,
+    alidnsRecords: [],
   });
   state.calls = {
     deleteRecord: [],
@@ -711,4 +713,134 @@ test('PATCH 应用 deploy 期间并发编辑不被旧快照覆盖', async () => 
   assert.equal(r.status, 200);
   const after = JSON.parse(fs.readFileSync(CFG, 'utf8'));
   assert.equal(after.apps[0].name, 'Concurrent Edit', '并发编辑必须保留');
+});
+
+// ---------- P0-3 auth: 仅 X-Panel-Token，拒 query token ----------
+
+test('panel.token 配置后，?token= query 不再被接受', async () => {
+  const cfg = testConfig();
+  cfg.panel.token = 'secret-token';
+  writeCfg(cfg);
+  // mock alidns 避免上游真实调用
+  state.records = [];
+  const r = await http('/api/esa/rules?token=secret-token');
+  assert.equal(r.status, 401);
+  assert.equal(r.data.ok, false);
+});
+
+test('panel.token 配置后，X-Panel-Token header 通过', async () => {
+  const cfg = testConfig();
+  cfg.panel.token = 'secret-token';
+  writeCfg(cfg);
+  state.records = [];
+  const r = await http('/api/esa/rules', { headers: { 'X-Panel-Token': 'secret-token' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.ok, true);
+});
+
+// ---------- P2-10 cleanup-residue 非 dryRun 必须 confirm ----------
+
+test('cleanup-residue 不带 confirm 拒绝非 dryRun 执行', async () => {
+  state.alidnsRecords = [
+    { recordId: 'r-1', RR: 'aiusage', type: 'A', value: '1.2.3.4' },
+  ];
+  const r = await http('/api/lucky/ddns/cleanup-residue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rrPrefix: 'aiusage', domainName: 'alanmaster.top' }),
+  });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.ok, false);
+  assert.match(r.data.error, /dryRun/);
+  assert.match(r.data.error, /yes-i-am-sure/);
+  // 确认没真删
+  assert.equal(state.calls.alidnsDelete.length, 0);
+});
+
+test('cleanup-residue confirm 通过且真删', async () => {
+  state.alidnsRecords = [
+    { recordId: 'r-1', RR: 'aiusage', type: 'A', value: '1.2.3.4' },
+  ];
+  const r = await http('/api/lucky/ddns/cleanup-residue?confirm=yes-i-am-sure', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rrPrefix: 'aiusage', domainName: 'alanmaster.top', confirm: 'yes-i-am-sure' }),
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.ok, true);
+  assert.equal(state.calls.alidnsDelete.length, 1);
+});
+
+test('cleanup-residue dryRun 不需要 confirm', async () => {
+  state.alidnsRecords = [];
+  const r = await http('/api/lucky/ddns/cleanup-residue?dryRun=1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rrPrefix: 'ghost', domainName: 'alanmaster.top' }),
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.ok, true);
+  assert.equal(r.data.dryRun, true);
+  assert.equal(state.calls.alidnsDelete.length, 0);
+});
+
+// ---------- P1-7 mem 存在时即使为空字符串也覆盖落盘值 ----------
+
+test('GET /api/apps/status mem 存在时始终取 mem（空字符串也覆盖落盘旧错误）', async () => {
+  const cfg = testConfig();
+  cfg.apps = [
+    {
+      id: 'app-mem-empty',
+      name: 'MemEmpty',
+      prefix: 'memempty',
+      target: 'http://127.0.0.1:80',
+      status: 'live',
+      lastError: '落盘旧错误',
+      lastCheckedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'app-mem-keep',
+      name: 'MemKeep',
+      prefix: 'memkeep',
+      target: 'http://127.0.0.1:80',
+      status: 'live',
+      lastError: '',
+      lastCheckedAt: '',
+    },
+  ];
+  writeCfg(cfg);
+  // mem 存在但 lastError/lastCheckedAt 都是空（刚被 setAppStatus 切到 live）
+  server.liveCheckState.set('app-mem-empty', {
+    timer: null, attempts: 1, lastError: '', lastCheckedAt: '',
+  });
+  server.liveCheckState.set('app-mem-keep', {
+    timer: null, attempts: 1, lastError: '', lastCheckedAt: '',
+  });
+
+  const r = await http('/api/apps/status');
+  assert.equal(r.status, 200);
+  assert.equal(r.data.ok, true);
+  const empty = r.data.items.find((i) => i.id === 'app-mem-empty');
+  const keep = r.data.items.find((i) => i.id === 'app-mem-keep');
+  assert.ok(empty && keep);
+  assert.equal(empty.lastError, '', 'mem 存在时空字符串应覆盖落盘旧错误');
+  assert.equal(empty.lastCheckedAt, '');
+  assert.equal(keep.lastError, '');
+  server.liveCheckState.clear();
+});
+
+// ---------- error middleware 同步 throw 行为 ----------
+
+test('同步 throw（express.json + 路由 throw）走统一 errorMiddleware 返回 500 + JSON', async () => {
+  // 严格 JSON parser（默认 strict:true）下 body `{}` 解析为 {}；/api/snapshots/restore
+  // 取 req.body?.file 为 undefined 时同步 throw '无效的快照文件' → errorMiddleware 500。
+  // 不放宽 parser：验证统一中间件对路由层同步 throw 的兜底，与 body 形态解耦。
+  const r = await http('/api/snapshots/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  assert.equal(r.status, 500);
+  assert.equal(r.data.ok, false);
+  assert.match(r.data.error, /无效的快照文件/);
 });

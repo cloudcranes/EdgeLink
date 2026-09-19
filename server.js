@@ -165,6 +165,10 @@ require('./routes/audit').register(app);
 require('./routes/apps').register(app);
 require('./routes/diagnostics').register(app);
 
+// 统一 JSON error 处理：放在所有路由注册之后，4 个参数签名 Express 才会识别为 error middleware。
+// asyncHandler 已经把异常 next(err) 抛到这里；同步 throw 也被 express 直接转 next(err)。
+app.use(require('./utils/http').errorMiddleware);
+
 const port = Number(process.env.PORT) || 8787;
 const host = process.env.HOST || '0.0.0.0';
 if (require.main === module) {

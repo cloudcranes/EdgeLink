@@ -69,3 +69,20 @@ test('清除公网解析残留：后端端点 + alidns 直连 + dryRun + 前端�
   assert.match(ddnsJs, /export async function cleanupResidue/);
   assert.match(ddnsJs, /cleanupResidue\(\{ rrPrefix, domainName: root \}, \{ dryRun: true \}\)/);
 });
+
+test('cleanup-residue 非 dryRun 必须 confirm=yes-i-am-sure', () => {
+  // 后端：常量定义 + 校验
+  assert.match(ddnsSrc, /CLEANUP_CONFIRM\s*=\s*['"]yes-i-am-sure['"]/);
+  assert.match(ddnsSrc, /confirm[\s\S]{0,200}yes-i-am-sure/);
+  assert.match(ddnsSrc, /err\.status\s*=\s*400/);
+  // api.js：透传 confirm
+  assert.match(apiJs, /cleanupResidue[\s\S]{0,400}confirm/);
+  // ddns.js 真删时传 confirm
+  assert.match(ddnsJs, /cleanupResidue\(\s*\{[\s\S]{0,200}confirm:\s*['"]yes-i-am-sure['"]/);
+});
+
+test('middleware/auth.js 仅 X-Panel-Token（删除 query token 接受）', () => {
+  const authSrc = readFileSync(join(__dirname, '..', 'middleware', 'auth.js'), 'utf8');
+  assert.match(authSrc, /X-Panel-Token/);
+  assert.doesNotMatch(authSrc, /req\.query\.token/);
+});

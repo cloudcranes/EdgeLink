@@ -136,11 +136,21 @@ function register(app) {
   // 清除公网解析残留：直连 alidns 删除指定主域下的解析记录（如已删除应用遗留的 aiusage.nas / aiusage.cdn）
   // body: { domainName: "alanmaster.top", records: [{ rr, type, value }] } 或 { rrPrefix: "aiusage" } 按前缀匹配
   // ?dryRun=1 只预览不删
+  // 非 dryRun 必须 confirm='yes-i-am-sure'（body 或 query 都可），否则拒绝执行——这是公网解析真实删除。
+  const CLEANUP_CONFIRM = 'yes-i-am-sure';
   app.post(
     '/api/lucky/ddns/cleanup-residue',
     asyncHandler(async (req, res) => {
       const config = readConfig();
       const dryRun = String(req.query.dryRun || '') === '1' || req.body?.dryRun === true;
+      if (!dryRun) {
+        const confirm = req.body?.confirm || req.query.confirm;
+        if (confirm !== CLEANUP_CONFIRM) {
+          const err = new Error(`非 dryRun 必须 confirm='${CLEANUP_CONFIRM}'（可放 body.confirm 或 ?confirm=）；请先 dryRun 预览后再确认真删`);
+          err.status = 400;
+          throw err;
+        }
+      }
       const domainName = String(req.body?.domainName || config.esa?.rootDomain || '').trim().toLowerCase();
       if (!domainName) throw new Error('缺少 domainName（站点根域）');
       const explicit = Array.isArray(req.body?.records) ? req.body.records : null;

@@ -4,6 +4,9 @@
   "private": true,
   "description": "One-click local Lucky reverse proxy + Alibaba Cloud ESA origin configuration panel",
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
     "test": "node --test \"test/**/*.test.js\""

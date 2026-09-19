@@ -1,4 +1,5 @@
-// 访问口令（可选）：config.panel.token 非空时，/api/* 除 /api/health 外校验 X-Panel-Token
+// 访问口令（可选）：config.panel.token 非空时，/api/* 除 /api/health 外校验 X-Panel-Token。
+// 只接受 X-Panel-Token 请求头，不再接受 query ?token=（避免日志/Referer 泄漏）。
 const { readConfig } = require('../lib/config');
 
 function apiAuth(req, res, next) {
@@ -19,7 +20,7 @@ function apiAuth(req, res, next) {
     next();
     return;
   }
-  const provided = req.get('X-Panel-Token') || req.query.token;
+  const provided = req.get('X-Panel-Token');
   if (provided === token) {
     next();
     return;

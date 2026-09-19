@@ -60,19 +60,29 @@ function register(app) {
   );
 
   // 应用状态查询：返回每个应用的 status + cdnUrl + lastError + lastCheckedAt
+  // building 期间 setAppStatus 不再每次 writeConfig，需从 liveCheckState 内存合并
+  // 最新 lastError/lastCheckedAt，避免 UI 在轮询窗口看到陈旧字段。
   app.get(
     '/api/apps/status',
     asyncHandler(async (req, res) => {
       const config = readConfig();
-      const items = (config.apps || []).map((app) => ({
-        id: app.id,
-        name: app.name || app.prefix,
-        prefix: app.prefix,
-        status: app.status || 'pending',
-        cdnUrl: app.cdnUrl || (app.esaEnabled !== false ? `https://${cdnDomainOf(app, config)}` : ''),
-        lastError: app.lastError || '',
-        lastCheckedAt: app.lastCheckedAt || '',
-      }));
+      const items = (config.apps || []).map((app) => {
+        const mem = liveCheckState.get(app.id);
+        return {
+          id: app.id,
+          name: app.name || app.prefix,
+          prefix: app.prefix,
+          status: app.status || 'pending',
+          cdnUrl:
+            app.cdnUrl ||
+            (app.esaEnabled !== false ? `https://${cdnDomainOf(app, config)}` : ''),
+          // 内存字段优先（building 轮询窗口的最新值）
+          // mem 存在时一律取 mem（包括空字符串）：避免 UI 在 building→failed/live 切换时
+          // 短暂看到落盘的旧 lastError/lastCheckedAt。
+          lastError: mem ? (mem.lastError || '') : (app.lastError || ''),
+          lastCheckedAt: mem ? (mem.lastCheckedAt || '') : (app.lastCheckedAt || ''),
+        };
+      });
       res.json({ ok: true, items });
     }),
   );
@@ -324,7 +334,9 @@ function register(app) {
         }
       }
 
-      // purge 清理失败：保留应用配置以便重试（不 splice、不写盘）；Lucky warn 不算失败
+      // purge 清理失败：保留应用配置以便重试（不 splice、不写盘）；Lucky warn 不算失败。
+      // 这是业务部分失败响应——需要在 5xx 状态码里附带 retained/logs/config 让前端能继续操作，
+      // 故不走通用 error middleware（后者只输出 {error, message}）。
       const purgeFailed = logs.some((l) => l.status === 'error');
       if (purgeFailed) {
         for (const item of logs) pushServerLog(item.step, item.status, item.detail);

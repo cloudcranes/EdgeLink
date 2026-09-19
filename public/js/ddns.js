@@ -32,7 +32,10 @@ export async function cleanupResidue(rrPrefix, domainName) {
       appendLog('清除残留', 'warn', `用户取消：${rrPrefix}`);
       return;
     }
-    const real = await api.cleanupResidue({ rrPrefix, domainName: root });
+    const real = await api.cleanupResidue(
+      { rrPrefix, domainName: root, confirm: 'yes-i-am-sure' },
+      { confirm: 'yes-i-am-sure' },
+    );
     (real.deleted || []).forEach((r) => {
       appendLog('清除残留', 'ok', `已删除 ${r.rr}.${dry.domainName} (${r.type})`);
     });

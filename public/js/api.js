@@ -134,7 +134,10 @@ export const api = {
   toggleEsaDomain: (domain, value) =>
     request('/api/esa/domain/toggle', { method: 'POST', body: JSON.stringify({ domain, value }) }),
   cleanupResidue: (body, opts = {}) => {
-    const qs = opts.dryRun ? '?dryRun=1' : '';
-    return request(`/api/lucky/ddns/cleanup-residue${qs}`, { method: 'POST', body: JSON.stringify(body) });
+    const params = new URLSearchParams();
+    if (opts.dryRun) params.set('dryRun', '1');
+    if (opts.confirm) params.set('confirm', String(opts.confirm));
+    const qs = params.toString();
+    return request(`/api/lucky/ddns/cleanup-residue${qs ? '?' + qs : ''}`, { method: 'POST', body: JSON.stringify(body) });
   },
 };

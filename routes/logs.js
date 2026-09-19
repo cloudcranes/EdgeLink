@@ -12,9 +12,21 @@ function register(app) {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
     subscribeLogClient(res);
-    req.on('close', () => {
+    // 幂等清理：close 与 error 都触发同一函数；EventEmitter.removeListener 对未注册函数是 no-op。
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      res.removeListener('close', cleanup);
+      res.removeListener('error', cleanup);
+      req.removeListener('close', cleanup);
+      req.removeListener('error', cleanup);
       unsubscribeLogClient(res);
-    });
+    };
+    res.on('close', cleanup);
+    res.on('error', cleanup);
+    req.on('close', cleanup);
+    req.on('error', cleanup);
   });
 }
 
